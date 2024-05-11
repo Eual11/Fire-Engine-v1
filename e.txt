@@ -1,0 +1,2 @@
+Progam C:\Users\Eual\Documents\C++\Fire-Engine\build\e.exe started with 1 args
+Closed Gracefully
