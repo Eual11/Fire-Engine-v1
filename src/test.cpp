@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
   }
   float fov = M_PI / 2;
   float aspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
-  float zFar = 10;
+  float zFar = 100;
   float zNear = 0.01;
   float fBank = 0.0;
   float fYaw = 0.0;
@@ -249,7 +249,7 @@ void init() {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
     exit(1);
   }
-  gTexture = IMG_LoadTexture(gRenderer, "./assets/textures/test_uv1.png");
+  gTexture = IMG_LoadTexture(gRenderer, "./assets/textures/dirt.png");
   if (!gTexture) {
 
     fprintf(stderr, "Error Occured: %s\n", IMG_GetError());
