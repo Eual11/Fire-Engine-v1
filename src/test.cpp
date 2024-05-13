@@ -5,7 +5,6 @@
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_video.h>
 #include <cmath>
-#include <cstdio>
 #include <iostream>
 #include <uml/mat4x4.h>
 #include <uml/vec2.h>
@@ -51,7 +50,7 @@ int main(int argc, char **argv) {
       {{0, 1, 0}, {1, 1, 0}, {0, 0, 0}},
       {{1, 0, 0}, {0, 0, 0}, {1, 1, 0}},
 
-      // BACK
+      /* // BACK */
       {{1, 0, 1}, {1, 1, 1}, {0, 1, 1}},
       {{1, 0, 1}, {0, 1, 1}, {0, 0, 1}},
 
@@ -64,24 +63,17 @@ int main(int argc, char **argv) {
       {{1, 1, 0}, {1, 1, 1}, {1, 0, 1}},
       {{1, 0, 1}, {1, 0, 0}, {1, 1, 0}},
 
-      // TOP
+      /* // TOP */
       {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}},
       {{1, 1, 1}, {1, 1, 0}, {0, 1, 0}},
 
-      // Bottom
+      /* // Bottom */
       {{0, 0, 0}, {1, 0, 1}, {0, 0, 1}},
       {{1, 0, 1}, {0, 0, 0}, {1, 0, 0}},
-
+      /**/
   };
   const char *names[] = {"FRONT", "BACK", "LEFT", "RIGHT", "TOP", "Bottom"};
-  float i = 0;
-  for (auto &tri : cube.tris) {
-    vec3 normal = Cross(tri.p[1] - tri.p[0], tri.p[2] - tri.p[0]);
-    normal.normalize();
-    printf("%s:  (%f, %f, %f)\n", names[static_cast<int>(i)], normal.x,
-           normal.y, normal.z);
-    i += 0.5;
-  }
+
   // parameters for the perspective projections
   //
   float fov = M_PI / 2;
@@ -91,13 +83,6 @@ int main(int argc, char **argv) {
   float fBank = 0.0;
   float fYaw = 0.0;
 
-  for (auto &tri : cube.tris) {
-    for (int i = 0; i < 3; i++) {
-      // slightly pushing out cube (count it as obj to world transform)
-
-      /* tri.p[i].z += 3; */
-    }
-  }
   mat4x4 clipMatrix = MakeClipMatrix(aspectRatio, fov, zNear, zFar);
 
   std::vector<SDL_Vertex> projectedMesh;
@@ -117,18 +102,17 @@ int main(int argc, char **argv) {
 
       // some goofy rotation
       vec3 normal = Cross(tri.p[1] - tri.p[0], tri.p[2] - tri.p[0]);
-
+      normal.normalize();
       mat4x4 ry = MakeRotY(fYaw);
       mat4x4 rz = MakeRotX(fBank);
       for (int i = 0; i < 3; i++) {
         vec4 v = {tri.p[i], 1};
-        v = v * ry;
+        v = v * ry * rz;
         tri.p[i].x = v.x;
         tri.p[i].y = v.y;
         tri.p[i].z = v.z;
       }
       for (int i = 0; i < 3; i++) {
-        // slightly pushing out cube (count it as obj to world transform)
 
         tri.p[i].z += 3;
       }
@@ -151,25 +135,21 @@ int main(int argc, char **argv) {
         SDL_Vertex ver;
         ver.position.x = (projectVec.x + 1) * 0.5 * WINDOW_WIDTH;
         ver.position.y = (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
-        if (normal == vec3(0, 0, -1)) {
-          ver.color = cols[1];
-        }
         if (normal == vec3(0, 0, 1)) {
-          ver.color = cols[2];
-        }
-        if (normal == vec3(0, 1, 0)) {
-          ver.color = cols[3];
-        }
-        if (normal == vec3(0, -1, 0)) {
-          ver.color = cols[4];
-        }
-        if (normal == vec3(0, 0, -1)) {
-          ver.color = cols[4];
-        }
-        if (normal == vec3(0, 0, 1)) {
-          ver.color = cols[5];
+          ver.color = {152, 255, 152, 255};
+        } else if (normal == vec3(0, 0, -1)) {
+          ver.color = {230, 230, 250, 255};
+        } else if (normal == vec3(1, 0, 0)) {
+          ver.color = {137, 207, 240, 255};
+        } else if (normal == vec3(-1, 0, 0)) {
+          ver.color = {255, 218, 185, 255};
+        } else if (normal == vec3(0, 1, 0)) {
+          ver.color = {200, 162, 200, 255};
+        } else if (normal == vec3(0, -1, 0)) {
+          ver.color = {55, 255, 153, 255};
         }
 
+        /* printf("(%f, %f, %f)\n", normal.x, normal.y, normal.z); */
         projectedMesh.push_back(ver);
       }
     }
