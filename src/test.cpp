@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_error.h>
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_video.h>
@@ -16,6 +17,7 @@ const int WINDOW_WIDTH = 640;
 const int WINDOW_HEIGHT = 480;
 SDL_Window *gWindow = nullptr;
 SDL_Renderer *gRenderer = nullptr;
+SDL_Texture *gTexture = nullptr;
 
 mat4x4 MakeClipMatrix(float aspectRatio, float fov, float zNear, float zFar);
 mat4x4 MakeRotX(float theta);
@@ -45,32 +47,27 @@ int main(int argc, char **argv) {
   printf("Progam %s started with %d args\n", argv[0], argc);
 
   mesh cube;
-  cube.tris = {
-      // FRONT FACE
-      {{0, 1, 0}, {1, 1, 0}, {0, 0, 0}},
-      {{1, 0, 0}, {0, 0, 0}, {1, 1, 0}},
+  cube.tris = {// FRONT FACE
+               {{0, 1, 0}, {1, 1, 0}, {0, 0, 0}},
+               {{1, 0, 0}, {0, 0, 0}, {1, 1, 0}},
 
-      /* // BACK */
-      {{1, 0, 1}, {1, 1, 1}, {0, 1, 1}},
-      {{1, 0, 1}, {0, 1, 1}, {0, 0, 1}},
+               /* // BACK */
+               {{1, 0, 1}, {1, 1, 1}, {0, 1, 1}},
+               {{1, 0, 1}, {0, 1, 1}, {0, 0, 1}},
 
-      // LFFT
-      {{0, 1, 1}, {0, 1, 0}, {0, 0, 1}},
-      {{0, 1, 0}, {0, 0, 0}, {0, 0, 1}},
+               // LFFT
+               {{0, 1, 1}, {0, 1, 0}, {0, 0, 1}},
+               {{0, 1, 0}, {0, 0, 0}, {0, 0, 1}},
 
-      // RIGHT
+               {{1, 1, 0}, {1, 1, 1}, {1, 0, 1}},
+               {{1, 0, 1}, {1, 0, 0}, {1, 1, 0}},
 
-      {{1, 1, 0}, {1, 1, 1}, {1, 0, 1}},
-      {{1, 0, 1}, {1, 0, 0}, {1, 1, 0}},
+               {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}},
+               {{1, 1, 1}, {1, 1, 0}, {0, 1, 0}},
 
-      /* // TOP */
-      {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}},
-      {{1, 1, 1}, {1, 1, 0}, {0, 1, 0}},
+               {{0, 0, 0}, {1, 0, 1}, {0, 0, 1}},
+               {{1, 0, 1}, {0, 0, 0}, {1, 0, 0}}
 
-      /* // Bottom */
-      {{0, 0, 0}, {1, 0, 1}, {0, 0, 1}},
-      {{1, 0, 1}, {0, 0, 0}, {1, 0, 0}},
-      /**/
   };
   const char *names[] = {"FRONT", "BACK", "LEFT", "RIGHT", "TOP", "Bottom"};
 
@@ -78,8 +75,8 @@ int main(int argc, char **argv) {
   //
   float fov = M_PI / 2;
   float aspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
-  float zFar = 10;
-  float zNear = 2;
+  float zFar = 100;
+  float zNear = 8;
   float fBank = 0.0;
   float fYaw = 0.0;
 
@@ -107,7 +104,7 @@ int main(int argc, char **argv) {
       mat4x4 rz = MakeRotX(fBank);
       for (int i = 0; i < 3; i++) {
         vec4 v = {tri.p[i], 1};
-        v = v * ry * rz;
+        v = v * ry;
         tri.p[i].x = v.x;
         tri.p[i].y = v.y;
         tri.p[i].z = v.z;
@@ -115,6 +112,8 @@ int main(int argc, char **argv) {
       for (int i = 0; i < 3; i++) {
 
         tri.p[i].z += 3;
+        tri.p[i].y -= 0.81;
+        /* tri.p[i].x -= 1.81; */
       }
       // projecting to screen space
       for (int i = 0; i < 3; i++) {
@@ -134,20 +133,25 @@ int main(int argc, char **argv) {
         };
         SDL_Vertex ver;
         ver.position.x = (projectVec.x + 1) * 0.5 * WINDOW_WIDTH;
-        ver.position.y = (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
-        if (normal == vec3(0, 0, 1)) {
-          ver.color = {152, 255, 152, 255};
-        } else if (normal == vec3(0, 0, -1)) {
-          ver.color = {230, 230, 250, 255};
-        } else if (normal == vec3(1, 0, 0)) {
-          ver.color = {137, 207, 240, 255};
-        } else if (normal == vec3(-1, 0, 0)) {
-          ver.color = {255, 218, 185, 255};
-        } else if (normal == vec3(0, 1, 0)) {
-          ver.color = {200, 162, 200, 255};
-        } else if (normal == vec3(0, -1, 0)) {
-          ver.color = {55, 255, 153, 255};
-        }
+        ver.position.y =
+            WINDOW_HEIGHT - (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
+
+        ver.color = {255, 255, 255, 255};
+        ver.tex_coord.x = fabs((projectVec.x));
+        ver.tex_coord.y = fabs((projectVec.y));
+        /* if (normal == vec3(0, 0, 1)) { */
+        /*   ver.color = {152, 255, 152, 255}; */
+        /* } else if (normal == vec3(0, 0, -1)) { */
+        /*   ver.color = {230, 230, 250, 255}; */
+        /* } else if (normal == vec3(1, 0, 0)) { */
+        /*   ver.color = {137, 207, 240, 255}; */
+        /* } else if (normal == vec3(-1, 0, 0)) { */
+        /*   ver.color = {255, 218, 185, 255}; */
+        /* } else if (normal == vec3(0, 1, 0)) { */
+        /*   ver.color = {200, 162, 200, 255}; */
+        /* } else if (normal == vec3(0, -1, 0)) { */
+        /*   ver.color = {55, 255, 153, 255}; */
+        /* } */
 
         /* printf("(%f, %f, %f)\n", normal.x, normal.y, normal.z); */
         projectedMesh.push_back(ver);
@@ -156,7 +160,7 @@ int main(int argc, char **argv) {
 
     SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xff);
 
-    SDL_RenderGeometry(gRenderer, NULL, projectedMesh.data(),
+    SDL_RenderGeometry(gRenderer, gTexture, projectedMesh.data(),
                        projectedMesh.size(), NULL, 0);
     SDL_RenderPresent(gRenderer);
     SDL_RenderClear(gRenderer);
@@ -169,6 +173,10 @@ int main(int argc, char **argv) {
 void init() {
   if (SDL_Init(SDL_INIT_VIDEO)) {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
+    exit(1);
+  }
+  if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) != IMG_INIT_PNG) {
+    fprintf(stderr, "Error Occured: %s\n", IMG_GetError());
     exit(1);
   }
 
@@ -185,6 +193,12 @@ void init() {
       gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   if (!gRenderer) {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
+    exit(1);
+  }
+  gTexture = IMG_LoadTexture(gRenderer, "./assets/textures/brick.png");
+  if (!gTexture) {
+
+    fprintf(stderr, "Error Occured: %s\n", IMG_GetError());
     exit(1);
   }
 }
