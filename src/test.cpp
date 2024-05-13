@@ -2,6 +2,7 @@
 #include <SDL2/SDL_error.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_video.h>
@@ -27,9 +28,25 @@ mat4x4 MakeRotZ(float theta);
 void init();
 void close_program();
 
+struct vert {
+  vert() = default;
+  vec3 p;
+  vec2 tc;
+  vert(std::initializer_list<float> vals) {
+    if (vals.size() != 5)
+      throw new std::invalid_argument("invalid arg");
+
+    auto it = vals.begin();
+    p.x = *it++;
+    p.y = *it++;
+    p.z = *it++;
+    tc.x = *it++;
+    tc.y = *it;
+  }
+};
 struct triangle {
-  vec3 p[3];
-  triangle(std::initializer_list<vec3> vals) {
+  vert p[3];
+  triangle(std::initializer_list<vert> vals) {
     if (vals.size() != 3)
       throw new std::invalid_argument("invalid arg");
     auto it = vals.begin();
@@ -45,41 +62,54 @@ int main(int argc, char **argv) {
 
   init();
   printf("Progam %s started with %d args\n", argv[0], argc);
-
   mesh cube;
-  cube.tris = {// FRONT FACE
-               {{0, 1, 0}, {1, 1, 0}, {0, 0, 0}},
-               {{1, 0, 0}, {0, 0, 0}, {1, 1, 0}},
+  cube.tris = {
+      // FRONT FACE
+      {{0, 1, 0, 0, 0}, {1, 1, 0, 1, 0}, {0, 0, 0, 0, 1}},
+      {{1, 0, 0, 1, 1}, {0, 0, 0, 0, 1}, {1, 1, 0, 1, 0}},
+      /**/
+      /* // BACK FACE */
+      {{1, 0, 1, 0, 1}, {1, 1, 1, 0, 0}, {0, 1, 1, 1, 0}},
+      {{1, 0, 1, 0, 1}, {0, 1, 1, 1, 0}, {0, 0, 1, 1, 1}},
+      // LFFT FACE
+      {{0, 1, 1, 0, 0}, {0, 1, 0, 1, 0}, {0, 0, 1, 0, 1}},
+      {{0, 1, 0, 1, 0}, {0, 0, 0, 1, 1}, {0, 0, 1, 0, 1}},
+      /**/
+      /* // RIGHT FACE */
+      {{1, 1, 0, 0, 0}, {1, 1, 1, 1, 0}, {1, 0, 1, 1, 1}},
+      {{1, 0, 1, 1, 1}, {1, 0, 0, 0, 1}, {1, 1, 0, 0, 0}},
 
-               /* // BACK */
-               {{1, 0, 1}, {1, 1, 1}, {0, 1, 1}},
-               {{1, 0, 1}, {0, 1, 1}, {0, 0, 1}},
+      // TOP
+      {{0, 1, 0, 0, 1}, {0, 1, 1, 0, 0}, {1, 1, 1, 1, 0}},
+      {{1, 1, 1, 1, 0}, {1, 1, 0, 1, 1}, {0, 1, 0, 0, 1}},
 
-               // LFFT
-               {{0, 1, 1}, {0, 1, 0}, {0, 0, 1}},
-               {{0, 1, 0}, {0, 0, 0}, {0, 0, 1}},
+      // BOTTOM
+      {{0, 0, 0, 0, 0}, {1, 0, 1, 1, 1}, {0, 0, 1, 0, 1}},
+      {{1, 0, 1, 1, 1}, {0, 0, 0, 0, 0}, {1, 0, 0, 1, 0}}
 
-               {{1, 1, 0}, {1, 1, 1}, {1, 0, 1}},
-               {{1, 0, 1}, {1, 0, 0}, {1, 1, 0}},
-
-               {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}},
-               {{1, 1, 1}, {1, 1, 0}, {0, 1, 0}},
-
-               {{0, 0, 0}, {1, 0, 1}, {0, 0, 1}},
-               {{1, 0, 1}, {0, 0, 0}, {1, 0, 0}}
-
+      /**/
   };
   const char *names[] = {"FRONT", "BACK", "LEFT", "RIGHT", "TOP", "Bottom"};
-
-  // parameters for the perspective projections
   //
+  //
+  float i = 0;
+  for (auto tri : cube.tris) {
+    vec3 normal = Cross(tri.p[1].p - tri.p[0].p, tri.p[2].p - tri.p[0].p);
+    normal.normalize();
+    printf("%s face normal: (%f, %f, %f)\n", names[(int)i], normal.x, normal.y,
+           normal.z);
+    i += 0.5;
+  }
   float fov = M_PI / 2;
   float aspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
-  float zFar = 100;
-  float zNear = 8;
+  float zFar = 10;
+  float zNear = 0.01;
   float fBank = 0.0;
   float fYaw = 0.0;
 
+  float xOffset = 0;
+  float yOffset = 0;
+  float zOffset = 3;
   mat4x4 clipMatrix = MakeClipMatrix(aspectRatio, fov, zNear, zFar);
 
   std::vector<SDL_Vertex> projectedMesh;
@@ -94,69 +124,95 @@ int main(int argc, char **argv) {
       if (e.type == SDL_QUIT) {
         quit = true;
       }
+      if (e.type == SDL_KEYDOWN) {
+        switch (e.key.keysym.sym) {
+        case SDLK_w: {
+          zOffset += 0.1;
+          break;
+        }
+        case SDLK_s: {
+          zOffset -= 0.1;
+          break;
+        }
+        case SDLK_a: {
+          xOffset -= 0.1;
+          break;
+        }
+        case SDLK_d: {
+          xOffset += 0.1;
+          break;
+        }
+        case SDLK_UP: {
+          yOffset += 0.1;
+          break;
+        }
+        case SDLK_DOWN: {
+          yOffset -= 0.1;
+          break;
+        }
+        case SDLK_e: {
+          fBank += 0.02;
+          break;
+        }
+        case SDLK_r: {
+          fBank -= 0.02;
+          break;
+        }
+        }
+      }
     }
     for (auto tri : cube.tris) {
 
       // some goofy rotation
-      vec3 normal = Cross(tri.p[1] - tri.p[0], tri.p[2] - tri.p[0]);
-      normal.normalize();
       mat4x4 ry = MakeRotY(fYaw);
       mat4x4 rz = MakeRotX(fBank);
       for (int i = 0; i < 3; i++) {
-        vec4 v = {tri.p[i], 1};
-        v = v * ry;
-        tri.p[i].x = v.x;
-        tri.p[i].y = v.y;
-        tri.p[i].z = v.z;
+        vec4 v = {tri.p[i].p, 1};
+        v = v * rz * ry;
+        tri.p[i].p.x = v.x;
+        tri.p[i].p.y = v.y;
+        tri.p[i].p.z = v.z;
       }
       for (int i = 0; i < 3; i++) {
 
-        tri.p[i].z += 3;
-        tri.p[i].y -= 0.81;
-        /* tri.p[i].x -= 1.81; */
+        tri.p[i].p.z += zOffset;
+        tri.p[i].p.y += yOffset;
+        tri.p[i].p.x += xOffset;
+      }
+      vec3 normal = Cross(tri.p[1].p - tri.p[0].p, tri.p[2].p - tri.p[0].p);
+      normal.normalize();
+
+      vec3 lookvec = {0, 0, 1};
+
+      float theta =
+          (lookvec * normal) / (lookvec.magnitude() * normal.magnitude());
+
+      if (theta < 0) {
+
+        for (int i = 0; i < 3; i++) {
+          vert v = tri.p[i];
+          // our premitive camera
+          vec4 projectVec = vec4{v.p, 1} * clipMatrix;
+          // perspective divide
+          projectVec.x /= projectVec.w;
+          projectVec.y /= projectVec.w;
+          projectVec.z /= projectVec.w;
+
+          SDL_Vertex ver;
+          ver.position.x = (projectVec.x + 1) * 0.5 * WINDOW_WIDTH;
+          ver.position.y =
+              WINDOW_HEIGHT - (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
+
+          ver.color = {255, 255, 255, 255};
+          ver.tex_coord.x = v.tc.x;
+          ver.tex_coord.y = v.tc.y;
+          projectedMesh.push_back(ver);
+        }
       }
       // projecting to screen space
-      for (int i = 0; i < 3; i++) {
-        vec3 v = tri.p[i];
-        vec4 projectVec = vec4{v, 1} * clipMatrix;
-        // perspective divide
-        projectVec.x /= projectVec.w;
-        projectVec.y /= projectVec.w;
-        projectVec.z /= projectVec.w;
-
-        SDL_Color cols[] = {
-            {217, 186, 218, 255}, {180, 198, 231, 255},
-            {255, 250, 205, 255}, {227, 185, 182, 255}, // yellow
-            {155, 20, 188, 255},                        // purple
-            {53, 166, 224, 255}                         // blue
-
-        };
-        SDL_Vertex ver;
-        ver.position.x = (projectVec.x + 1) * 0.5 * WINDOW_WIDTH;
-        ver.position.y =
-            WINDOW_HEIGHT - (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
-
-        ver.color = {255, 255, 255, 255};
-        ver.tex_coord.x = fabs((projectVec.x));
-        ver.tex_coord.y = fabs((projectVec.y));
-        /* if (normal == vec3(0, 0, 1)) { */
-        /*   ver.color = {152, 255, 152, 255}; */
-        /* } else if (normal == vec3(0, 0, -1)) { */
-        /*   ver.color = {230, 230, 250, 255}; */
-        /* } else if (normal == vec3(1, 0, 0)) { */
-        /*   ver.color = {137, 207, 240, 255}; */
-        /* } else if (normal == vec3(-1, 0, 0)) { */
-        /*   ver.color = {255, 218, 185, 255}; */
-        /* } else if (normal == vec3(0, 1, 0)) { */
-        /*   ver.color = {200, 162, 200, 255}; */
-        /* } else if (normal == vec3(0, -1, 0)) { */
-        /*   ver.color = {55, 255, 153, 255}; */
-        /* } */
-
-        /* printf("(%f, %f, %f)\n", normal.x, normal.y, normal.z); */
-        projectedMesh.push_back(ver);
-      }
     }
+    fBank += 0.02;
+    fYaw += 0.02;
 
     SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xff);
 
@@ -164,8 +220,6 @@ int main(int argc, char **argv) {
                        projectedMesh.size(), NULL, 0);
     SDL_RenderPresent(gRenderer);
     SDL_RenderClear(gRenderer);
-    fYaw += 0.01;
-    fBank += 0.02;
   }
   close_program();
   return 0;
@@ -195,7 +249,7 @@ void init() {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
     exit(1);
   }
-  gTexture = IMG_LoadTexture(gRenderer, "./assets/textures/brick.png");
+  gTexture = IMG_LoadTexture(gRenderer, "./assets/textures/test_uv1.png");
   if (!gTexture) {
 
     fprintf(stderr, "Error Occured: %s\n", IMG_GetError());
@@ -237,6 +291,7 @@ mat4x4 MakeRotX(float theta) {
   };
   return m;
 }
+
 mat4x4 MakeRotY(float theta) {
 
   float st = sin(theta);
