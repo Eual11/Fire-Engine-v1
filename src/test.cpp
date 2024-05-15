@@ -9,6 +9,7 @@
 #include <cmath>
 #include <iostream>
 #include <uml/mat4x4.h>
+#include <uml/transform.h>
 #include <uml/vec2.h>
 #include <uml/vec3.h>
 #include <uml/vec4.h>
@@ -19,11 +20,6 @@ const int WINDOW_HEIGHT = 480;
 SDL_Window *gWindow = nullptr;
 SDL_Renderer *gRenderer = nullptr;
 SDL_Texture *gTexture = nullptr;
-
-mat4x4 MakeClipMatrix(float aspectRatio, float fov, float zNear, float zFar);
-mat4x4 MakeRotX(float theta);
-mat4x4 MakeRotY(float theta);
-mat4x4 MakeRotZ(float theta);
 
 void init();
 void close_program();
@@ -101,7 +97,7 @@ int main(int argc, char **argv) {
     i += 0.5;
   }
   float fov = M_PI / 2;
-  float aspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
+  float aspectRatio = 1080.0 / 1920.0;
   float zFar = 100;
   float zNear = 0.01;
   float fBank = 0.0;
@@ -110,7 +106,7 @@ int main(int argc, char **argv) {
   float xOffset = 0;
   float yOffset = 0;
   float zOffset = 3;
-  mat4x4 clipMatrix = MakeClipMatrix(aspectRatio, fov, zNear, zFar);
+  mat4x4 clipMatrix = ClipPrespective(aspectRatio, fov, zNear, zFar);
 
   std::vector<SDL_Vertex> projectedMesh;
 
@@ -164,14 +160,13 @@ int main(int argc, char **argv) {
     for (auto tri : cube.tris) {
 
       // some goofy rotation
-      mat4x4 ry = MakeRotY(fYaw);
-      mat4x4 rz = MakeRotX(fBank);
+      mat4x4 ry = RotateAxis({0, 1, 0}, fYaw);
+      mat4x4 rz = RotateAxis({0, 0, 1}, fBank);
+      mat4x4 sc = ScaleUniform(0.5);
+      ;
       for (int i = 0; i < 3; i++) {
-        vec4 v = {tri.p[i].p, 1};
-        v = v * rz * ry;
-        tri.p[i].p.x = v.x;
-        tri.p[i].p.y = v.y;
-        tri.p[i].p.z = v.z;
+
+        tri.p[i].p = tri.p[i].p * sc * ry * rz;
       }
       for (int i = 0; i < 3; i++) {
 
@@ -249,7 +244,7 @@ void init() {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
     exit(1);
   }
-  gTexture = IMG_LoadTexture(gRenderer, "./assets/textures/dirt.png");
+  gTexture = IMG_LoadTexture(gRenderer, "./assets/textures/brick.png");
   if (!gTexture) {
 
     fprintf(stderr, "Error Occured: %s\n", IMG_GetError());
@@ -265,49 +260,4 @@ void close_program() {
   SDL_Quit();
 
   printf("Closed Gracefully\n");
-}
-mat4x4 MakeClipMatrix(float aspectRatio, float fov, float zNear, float zFar) {
-
-  mat4x4 m{0};
-  float zoom = 1.0 / tan(fov / 2);
-  float lamba = zFar / (zFar - zNear);
-  m[0][0] = aspectRatio * zoom;
-  m[1][1] = zoom;
-  m[2][2] = lamba;
-  m[2][3] = 1;
-  m[3][2] = -zNear * lamba;
-
-  return m;
-}
-
-mat4x4 MakeRotX(float theta) {
-  float st = sin(theta);
-  float ct = cos(theta);
-  mat4x4 m{
-
-      1,   0,  0, 0, 0, ct, st, 0, 0,
-      -st, ct, 0, 0, 0, 0,  1
-
-  };
-  return m;
-}
-
-mat4x4 MakeRotY(float theta) {
-
-  float st = sin(theta);
-  float ct = cos(theta);
-  mat4x4 m{
-
-      ct, 0, -st, 0, 0, 1, 0, 0, st, 0, ct, 0, 0, 0, 0, 1};
-
-  return m;
-}
-
-mat4x4 MakeRotZ(float theta) {
-  float st = sin(theta);
-  float ct = cos(theta);
-
-  mat4x4 m{ct, st, 0, 0, -st, ct, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-
-  return m;
 }
