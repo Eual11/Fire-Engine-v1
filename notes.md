@@ -38,3 +38,50 @@ FRONT face normal: (0.000000, 0.000000, -1.000000)
 BACK face normal: (0.000000, -0.000000, 1.000000)
 BACK face normal: (0.000000, 0.000000, 1.000000)
 
+
+
+``` cpp 
+mat4x4 MakeLookAt(vec3 camerapos, vec3 up, vec3 target) {
+  vec3 forward = target - camerapos;
+  forward.normalize();
+
+  vec3 newup = up - (forward * (forward * up));
+  newup.normalize();
+
+  vec3 right = Cross(newup, forward);
+
+  float tx = camerapos * right;
+  float ty = newup * camerapos;
+  float tz = forward * camerapos;
+
+  mat4x4 m{right.x,     right.y,     right.z,     0,         newup.x,   newup.y,
+           newup.z,     0,           forward.x,   forward.y, forward.z, 0,
+           camerapos.x, camerapos.y, camerapos.z, 1};
+
+  return test(m);
+}
+mat4x4 test(mat4x4 mat) {
+  mat4x4 matrix;
+  matrix[0][0] = mat[0][0];
+  matrix[0][1] = mat[1][0];
+  matrix[0][2] = mat[2][0];
+  matrix[0][3] = 0;
+  matrix[1][0] = mat[0][1];
+  matrix[1][1] = mat[1][1];
+  matrix[1][2] = mat[2][1];
+  matrix[1][3] = 0;
+  matrix[2][0] = mat[0][2];
+  matrix[2][1] = mat[1][2];
+  matrix[2][2] = mat[2][2];
+  matrix[2][0] = 0;
+  matrix[3][0] = -(mat[3][0] * matrix[0][0] + mat[3][1] * matrix[1][0] +
+                   mat[3][2] * matrix[2][0]);
+  matrix[3][1] = -(mat[3][0] * matrix[0][1] + mat[3][1] * matrix[1][1] +
+                   mat[3][2] * matrix[2][1]);
+  matrix[3][2] = -(mat[3][0] * matrix[0][2] + mat[3][1] * matrix[1][2] +
+                   mat[3][2] * matrix[2][2]);
+  matrix[3][3] = 1.0f;
+  return matrix;
+}
+
+```
