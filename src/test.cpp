@@ -19,9 +19,8 @@ const int WINDOW_WIDTH = 640;
 const int WINDOW_HEIGHT = 480;
 SDL_Window *gWindow = nullptr;
 SDL_Renderer *gRenderer = nullptr;
+mat4x4 MakeLookAt(vec3 position, vec3 target, vec3 up);
 SDL_Texture *gTexture = nullptr;
-mat4x4 MakeLookAt(vec3 camerapos, vec3 up, vec3 target);
-mat4x4 MakeViewMatrix(vec3 forward, vec3 right, vec3 up, vec3 campos);
 void init();
 void close_program();
 
@@ -100,10 +99,12 @@ int main(int argc, char **argv) {
   float fov = M_PI / 2;
   float aspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_HEIGHT;
   float zFar = 100;
+  vec3 camera = {0, 0, 0};
   float zNear = 0.01;
   float fBank = 0.0;
   float fYaw = 0.0;
-  vec3 camera = {0, 0, 0};
+  float fTargetYaw = 0.0;
+  float fTargetBank = 0.0;
   float xOffset = 0;
   float yOffset = 0;
   float zOffset = 3;
@@ -122,43 +123,50 @@ int main(int argc, char **argv) {
       if (e.type == SDL_KEYDOWN) {
         switch (e.key.keysym.sym) {
         case SDLK_w: {
-
-          camera.z += 0.1;
+          camera.z += 0.2;
           break;
         }
         case SDLK_s: {
-          camera.z -= 0.1;
+          camera.z -= 0.2;
           break;
         }
         case SDLK_a: {
-          camera.x -= 0.1;
+          camera.x -= 0.2;
           break;
         }
         case SDLK_d: {
-          camera.x += 0.1;
+          camera.x += 0.2;
           break;
         }
         case SDLK_UP: {
-          camera.y += 0.1;
+          camera.y += 0.2;
           break;
         }
         case SDLK_DOWN: {
-          camera.y -= 0.1;
+          camera.y -= 0.2;
           break;
         }
         case SDLK_e: {
-          /* fYaw += 0.02; */
+          fTargetBank += 0.2;
+          break;
+        }
+        case SDLK_y: {
+          fTargetBank -= 0.2;
           break;
         }
         case SDLK_r: {
-          /* fYaw -= 0.02; */
+          fTargetYaw += 0.2;
+          break;
+        }
+        case SDLK_t: {
+          fTargetYaw -= 0.2;
           break;
         }
         }
       }
     }
     fYaw += 0.02;
-    fBank += 0.02;
+    fBank += 0.01;
     for (auto tri : cube.tris) {
 
       // some goofy rotation
@@ -168,7 +176,7 @@ int main(int argc, char **argv) {
       ;
       for (int i = 0; i < 3; i++) {
 
-        tri.p[i].p = tri.p[i].p * sc * ry * rz;
+        tri.p[i].p = tri.p[i].p * sc * rz * ry;
       }
       for (int i = 0; i < 3; i++) {
 
@@ -188,16 +196,14 @@ int main(int argc, char **argv) {
 
         for (int i = 0; i < 3; i++) {
 
-          vec3 target = {0, 0, 1};
-          /* target = target * RotateY(fYaw); */
-          target += camera;
           vec3 up = {0, 1, 0};
-          mat4x4 lookAt = MakeLookAt(camera, up, target);
+          vec3 target = {0, 0, 1};
+          target = target * RotateY(fTargetYaw) * RotateZ(fTargetBank);
+          mat4x4 lookAt = MakeLookAt(camera, camera + target, up);
           vert v = tri.p[i];
-          v.p = v.p * lookAt;
 
           // our premitive camera
-          vec4 projectVec = vec4{v.p, 1} * clipMatrix;
+          vec4 projectVec = vec4{v.p, 1} * (lookAt * clipMatrix);
           // perspective divide
           projectVec.x /= projectVec.w;
           projectVec.y /= projectVec.w;
@@ -208,8 +214,15 @@ int main(int argc, char **argv) {
           ver.position.y =
               WINDOW_HEIGHT - (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
 
-          ver.color = {255, 255, 255, 255};
-          ver.tex_coord.x = v.tc.x;
+          // ignoring the textures for now
+          SDL_Color col = {0, 0, 0, 255};
+          if (i == 0)
+            col.r = 255;
+          else if (i == 1)
+            col.b = 255;
+          else
+            col.g = 255;
+          ver.color = col;
           ver.tex_coord.y = v.tc.y;
           projectedMesh.push_back(ver);
         }
@@ -218,7 +231,7 @@ int main(int argc, char **argv) {
     }
     SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xff);
 
-    SDL_RenderGeometry(gRenderer, gTexture, projectedMesh.data(),
+    SDL_RenderGeometry(gRenderer, NULL, projectedMesh.data(),
                        projectedMesh.size(), NULL, 0);
     SDL_RenderPresent(gRenderer);
     SDL_RenderClear(gRenderer);
@@ -268,27 +281,20 @@ void close_program() {
 
   printf("Closed Gracefully\n");
 }
-mat4x4 MakeViewMatrix(vec3 forward, vec3 right, vec3 up, vec3 campos) {
 
-  float tx = campos * right;
-  float ty = campos * up;
-  float tz = campos * forward;
-  return {right.x,   right.y,   right.z,   0, up.x, up.y, up.z, 0,
-          forward.x, forward.y, forward.z, 0, -tx,  -ty,  -tz,  1};
-}
-
-mat4x4 MakeLookAt(vec3 camerapos, vec3 up, vec3 target) {
-  vec3 forward = target - camerapos;
+mat4x4 MakeLookAt(vec3 position, vec3 target, vec3 up) {
+  vec3 forward = target - position;
   forward.normalize();
-
-  vec3 newup = up - (forward * (forward * up));
+  vec3 newup = up - (forward * (up * forward));
   newup.normalize();
 
   vec3 right = Cross(newup, forward);
-  mat4x4 m = {right.x,     right.y,     right.z,     0,
-              newup.x,     newup.y,     newup.z,     0,
-              forward.x,   forward.y,   forward.z,   0,
-              camerapos.x, camerapos.y, camerapos.z, 1};
+
+  right.normalize();
+
+  mat4x4 m = {right.x,    right.y,    right.z,    0,         newup.x,   newup.y,
+              newup.z,    0,          forward.x,  forward.y, forward.z, 0,
+              position.x, position.y, position.z, 1};
   m.inverse();
   return m;
 }
