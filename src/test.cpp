@@ -1,3 +1,5 @@
+// garbage
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_error.h>
 #include <SDL2/SDL_events.h>
@@ -6,8 +8,10 @@
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_video.h>
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <stdint.h>
 #include <uml/mat4x4.h>
 #include <uml/transform.h>
 #include <uml/vec2.h>
@@ -23,25 +27,26 @@ mat4x4 MakeLookAt(vec3 position, vec3 target, vec3 up);
 SDL_Texture *gTexture = nullptr;
 void init();
 void close_program();
+float DISABLE_BACKFACE_CULLING = false;
 
 struct vert {
   vert() = default;
   vec3 p;
-  vec2 tc;
+  float ln;
   vert(std::initializer_list<float> vals) {
-    if (vals.size() != 5)
+    if (vals.size() != 3)
       throw new std::invalid_argument("invalid arg");
 
     auto it = vals.begin();
     p.x = *it++;
     p.y = *it++;
     p.z = *it++;
-    tc.x = *it++;
-    tc.y = *it;
   }
 };
 struct triangle {
   vert p[3];
+  float ln;
+  triangle() = default;
   triangle(std::initializer_list<vert> vals) {
     if (vals.size() != 3)
       throw new std::invalid_argument("invalid arg");
@@ -61,27 +66,28 @@ int main(int argc, char **argv) {
   mesh cube;
   cube.tris = {
       // FRONT FACE
-      {{0, 1, 0, 0, 0}, {1, 1, 0, 1, 0}, {0, 0, 0, 0, 1}},
-      {{1, 0, 0, 1, 1}, {0, 0, 0, 0, 1}, {1, 1, 0, 1, 0}},
-      /**/
-      /* // BACK FACE */
-      {{1, 0, 1, 0, 1}, {1, 1, 1, 0, 0}, {0, 1, 1, 1, 0}},
-      {{1, 0, 1, 0, 1}, {0, 1, 1, 1, 0}, {0, 0, 1, 1, 1}},
-      // LFFT FACE
-      {{0, 1, 1, 0, 0}, {0, 1, 0, 1, 0}, {0, 0, 1, 0, 1}},
-      {{0, 1, 0, 1, 0}, {0, 0, 0, 1, 1}, {0, 0, 1, 0, 1}},
-      /**/
-      /* // RIGHT FACE */
-      {{1, 1, 0, 0, 0}, {1, 1, 1, 1, 0}, {1, 0, 1, 1, 1}},
-      {{1, 0, 1, 1, 1}, {1, 0, 0, 0, 1}, {1, 1, 0, 0, 0}},
+      {{0, 1, 0}, {1, 1, 0}, {0, 0, 0}},
+      {{1, 0, 0}, {0, 0, 0}, {1, 1, 0}},
+
+      /* // BACK */
+      {{1, 0, 1}, {1, 1, 1}, {0, 1, 1}},
+      {{1, 0, 1}, {0, 1, 1}, {0, 0, 1}},
+
+      // LFFT
+      {{0, 1, 1}, {0, 1, 0}, {0, 0, 1}},
+      {{0, 1, 0}, {0, 0, 0}, {0, 0, 1}},
+
+      // RIGHT
+      {{1, 1, 0}, {1, 1, 1}, {1, 0, 1}},
+      {{1, 0, 1}, {1, 0, 0}, {1, 1, 0}},
 
       // TOP
-      {{0, 1, 0, 0, 1}, {0, 1, 1, 0, 0}, {1, 1, 1, 1, 0}},
-      {{1, 1, 1, 1, 0}, {1, 1, 0, 1, 1}, {0, 1, 0, 0, 1}},
+      {{0, 1, 0}, {0, 1, 1}, {1, 1, 1}},
+      {{1, 1, 1}, {1, 1, 0}, {0, 1, 0}},
 
       // BOTTOM
-      {{0, 0, 0, 0, 0}, {1, 0, 1, 1, 1}, {0, 0, 1, 0, 1}},
-      {{1, 0, 1, 1, 1}, {0, 0, 0, 0, 0}, {1, 0, 0, 1, 0}}
+      {{0, 0, 0}, {1, 0, 1}, {0, 0, 1}},
+      {{1, 0, 1}, {0, 0, 0}, {1, 0, 0}}
 
       /**/
   };
@@ -104,18 +110,14 @@ int main(int argc, char **argv) {
   float fBank = 0.0;
   float fYaw = 0.0;
   float fTargetYaw = 0.0;
-  float fTargetBank = 0.0;
   float xOffset = 0;
   float yOffset = 0;
   float zOffset = 3;
   mat4x4 clipMatrix = ClipPrespective(aspectRatio, fov, zNear, zFar);
-
-  std::vector<SDL_Vertex> projectedMesh;
-
   bool quit = false;
   SDL_Event e;
   while (!quit) {
-    projectedMesh.clear();
+    std::vector<triangle> projectedMesh;
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT) {
         quit = true;
@@ -146,14 +148,6 @@ int main(int argc, char **argv) {
           camera.y -= 0.2;
           break;
         }
-        case SDLK_e: {
-          fTargetBank += 0.2;
-          break;
-        }
-        case SDLK_y: {
-          fTargetBank -= 0.2;
-          break;
-        }
         case SDLK_r: {
           fTargetYaw += 0.2;
           break;
@@ -170,9 +164,9 @@ int main(int argc, char **argv) {
     for (auto tri : cube.tris) {
 
       // some goofy rotation
-      mat4x4 ry = RotateAxis({0, 1, 0}, fYaw);
-      mat4x4 rz = RotateAxis({0, 0, 1}, fBank);
-      mat4x4 sc = ScaleUniform(0.5);
+      mat4x4 ry = RotateY(fYaw);
+      mat4x4 rz = RotateZ(fBank);
+      mat4x4 sc = ScaleUniform(1);
       ;
       for (int i = 0; i < 3; i++) {
 
@@ -184,6 +178,13 @@ int main(int argc, char **argv) {
         tri.p[i].p.y += yOffset;
         tri.p[i].p.x += xOffset;
       }
+      for (int i = 0; i < 3; i++) {
+        vec3 up = {0, 1, 0};
+        vec3 target = {0, 0, 1};
+        target = target * RotateY(fTargetYaw);
+        mat4x4 lookAt = MakeLookAt(camera, camera + target, up);
+        tri.p[i].p = tri.p[i].p * lookAt;
+      }
       vec3 normal = Cross(tri.p[1].p - tri.p[0].p, tri.p[2].p - tri.p[0].p);
       normal.normalize();
 
@@ -191,48 +192,55 @@ int main(int argc, char **argv) {
 
       float theta =
           (lookvec * normal) / (lookvec.magnitude() * normal.magnitude());
-
-      if (theta < 0) {
-
+      tri.ln = theta;
+      triangle tr;
+      tr.ln = theta;
+      if (theta < 0 || DISABLE_BACKFACE_CULLING) {
         for (int i = 0; i < 3; i++) {
-
-          vec3 up = {0, 1, 0};
-          vec3 target = {0, 0, 1};
-          target = target * RotateY(fTargetYaw) * RotateZ(fTargetBank);
-          mat4x4 lookAt = MakeLookAt(camera, camera + target, up);
           vert v = tri.p[i];
-
           // our premitive camera
-          vec4 projectVec = vec4{v.p, 1} * (lookAt * clipMatrix);
+          vec4 projectVec = vec4{v.p, 1} * clipMatrix;
           // perspective divide
           projectVec.x /= projectVec.w;
           projectVec.y /= projectVec.w;
           projectVec.z /= projectVec.w;
-
-          SDL_Vertex ver;
-          ver.position.x = (projectVec.x + 1) * 0.5 * WINDOW_WIDTH;
-          ver.position.y =
-              WINDOW_HEIGHT - (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
-
-          // ignoring the textures for now
-          SDL_Color col = {0, 0, 0, 255};
-          if (i == 0)
-            col.r = 255;
-          else if (i == 1)
-            col.b = 255;
-          else
-            col.g = 255;
-          ver.color = col;
-          ver.tex_coord.y = v.tc.y;
-          projectedMesh.push_back(ver);
+          tr.p[i].p = {projectVec.x, projectVec.y, projectVec.z};
         }
       }
       // projecting to screen space
+      projectedMesh.push_back(tr);
+    }
+    std::sort(projectedMesh.begin(), projectedMesh.end(),
+              [](const triangle &a, const triangle &b) {
+                float z1 = (a.p[0].p.z + a.p[0].p.z + a.p[0].p.z) / 3;
+                float z2 = (b.p[0].p.z + b.p[1].p.z + b.p[2].p.z) / 3;
+
+                return z1 > z2;
+              });
+    std::vector<SDL_Vertex> verts;
+    for (const auto &tri : projectedMesh) {
+      for (int i = 0; i < 3; i++) {
+        vec3 projectVec = tri.p[i].p;
+
+        // our premitive camera
+        // perspective divide
+        SDL_Vertex ver;
+        ver.position.x = (projectVec.x + 1) * 0.5 * WINDOW_WIDTH;
+        ver.position.y =
+            WINDOW_HEIGHT - (projectVec.y + 1) * 0.5 * WINDOW_HEIGHT;
+
+        // ignoring the textures for now
+        // lambertian lighting
+
+        uint8_t col = -tri.ln * 255;
+        SDL_Color color = {col, col, col};
+        ver.color = color;
+        verts.push_back(ver);
+      }
     }
     SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xff);
 
-    SDL_RenderGeometry(gRenderer, NULL, projectedMesh.data(),
-                       projectedMesh.size(), NULL, 0);
+    SDL_RenderGeometry(gRenderer, NULL, verts.data(), verts.size(), NULL, 0);
     SDL_RenderPresent(gRenderer);
     SDL_RenderClear(gRenderer);
   }
