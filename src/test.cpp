@@ -7,6 +7,7 @@
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_video.h>
 #include <algorithm>
 #include <cmath>
@@ -23,6 +24,7 @@ const int WINDOW_WIDTH = 640;
 const int WINDOW_HEIGHT = 480;
 SDL_Window *gWindow = nullptr;
 SDL_Renderer *gRenderer = nullptr;
+TTF_Font *gFont = nullptr;
 mat4x4 MakeLookAt(vec3 position, vec3 target, vec3 up);
 SDL_Texture *gTexture = nullptr;
 void init();

@@ -1,6 +1,8 @@
 #ifndef _PERMITIVES_HPP
 #define _PERMITIVES_HPP
+#include <fstream>
 #include <initializer_list>
+#include <sstream>
 #include <stdexcept>
 #include <uml/utils.h>
 #include <uml/vec2.h>
@@ -65,6 +67,47 @@ struct triangle {
 
 struct mesh {
   std::vector<triangle> triangles;
+  void LoadObj(const char *path) {
+    std::fstream file = std::fstream(path, std::ios::in | std::ios::binary);
+
+    if (!file.is_open()) {
+      fprintf(stderr, "Couldn't open file\n");
+      exit(1);
+    }
+
+    std::string junk;
+
+    std::string line;
+    std::vector<vertex> vertices;
+
+    while (std::getline(file, line, '\n')) {
+      if (line[0] == 'v') {
+        // defining verticies
+        std::stringstream stream(line);
+
+        float x, y, z;
+        stream >> junk >> x >> y >> z;
+
+        vertices.push_back(vec3(x, y, z));
+      }
+      if (line[0] == 'f') {
+        // loading face data assuming the faces are triangualted
+
+        size_t id1, id2, id3;
+
+        std::stringstream stream(line);
+        stream >> junk >> id1 >> id2 >> id3;
+        id1--;
+        id2--;
+        id3--;
+        if (id1 < vertices.size() && id2 < vertices.size() &&
+            id3 < vertices.size()) {
+          this->triangles.push_back(
+              {vertices[id1], vertices[id2], vertices[id3]});
+        }
+      }
+    }
+  }
 };
 
 std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
