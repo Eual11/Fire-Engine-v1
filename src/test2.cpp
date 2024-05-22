@@ -47,9 +47,9 @@ int main(int argc, char **argv) {
   float fPitch = 0.0f;
   float fAspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
   mat4x4 clipMatrix = ClipPrespective(fAspectRatio, fFov, zNear, zFar);
+  mat4x4 viewMatrix;
 
   vec3 lookDir = {0, 0, 1}; // we are looking toward z direction
-  vec3 lightDir = {0, 0, 1};
   vec3 cameraPosition = {0, 0, 0};
   bool quit = false;
   SDL_Event e;
@@ -62,35 +62,49 @@ int main(int argc, char **argv) {
       if (e.type == SDL_KEYDOWN) {
         switch (e.key.keysym.sym) {
         case SDLK_UP: {
-          cameraPosition.y += 0.2;
+          vec3 upVec = {viewMatrix.m[0][1], viewMatrix.m[1][1],
+                        viewMatrix.m[2][1]};
+          cameraPosition += upVec * 0.2;
           break;
         }
         case SDLK_DOWN: {
-          cameraPosition.y -= 0.2;
+          vec3 upVec = {viewMatrix.m[0][1], viewMatrix.m[1][1],
+                        viewMatrix.m[2][1]};
+          cameraPosition += upVec * -0.2;
           break;
         }
         case SDLK_w: {
-          cameraPosition.z += 0.2;
+          vec3 forwardVec = {viewMatrix.m[0][2], viewMatrix.m[1][2],
+                             viewMatrix.m[2][2]};
+          cameraPosition += forwardVec * 0.2;
           break;
         }
         case SDLK_s: {
-          cameraPosition.z -= 0.2;
+          vec3 forwardVec = {viewMatrix.m[0][2], viewMatrix.m[1][2],
+                             viewMatrix.m[2][2]};
+          cameraPosition += forwardVec * -0.2;
           break;
         }
         case SDLK_a: {
-          cameraPosition.x -= 0.2;
+          vec3 rightVec = {viewMatrix.m[0][0], viewMatrix.m[1][0],
+                           viewMatrix.m[2][0]};
+          cameraPosition += rightVec * 0.2;
           break;
         }
         case SDLK_d: {
-          cameraPosition.x += 0.2;
+          vec3 rightVec = {viewMatrix.m[0][0], viewMatrix.m[1][0],
+                           viewMatrix.m[2][0]};
+          cameraPosition += rightVec * -0.2;
           break;
         }
         case SDLK_e: {
+          /* printf("(%f, %f, %f)\n", lookDir.x, lookDir.y, lookDir.z); */
           fTargetYaw -= 0.02;
           break;
         }
         case SDLK_r: {
 
+          /* printf("(%f, %f, %f)\n", lookDir.x, lookDir.y, lookDir.z); */
           fTargetYaw += 0.02;
           break;
         }
@@ -100,39 +114,32 @@ int main(int argc, char **argv) {
     mat4x4 ry = RotateY(fYaw);
     mat4x4 rx = RotateX(0.0);
     mat4x4 rz = RotateZ(fBank);
-    /* mat4x4 sc = ScaleX(0.5); */
     vec3 target = {0, 0, 1};
     target = target * RotateY(fTargetYaw);
+    lookDir = target;
+    ;
+    lookDir.normalize();
     mat4x4 final_transform = rx * ry * rz;
-    mat4x4 viewMatrix =
-        LookAt(cameraPosition, target + cameraPosition, {0, 1, 0});
+    viewMatrix = LookAt(cameraPosition, target + cameraPosition, {0, 1, 0});
     std::vector<triangle> projectedMesh;
     for (auto tri : cube.triangles) {
-
-      // very basic world transform
 
       // transforming each vertex of the triangle
       for (size_t i = 0; i < 3; i++) {
 
-        tri.verticies[i].position = tri.verticies[i].position * final_transform;
+        // very basic world transform
+        tri.verticies[i].position = tri.verticies[i].position;
         tri.verticies[i].position.z += 11;
-
-        // view transform goes here
-        //
-        //
       }
-
-      // frustum culling
-      //
-      /* std::vector<triangle> clippedTriangles = */
-      /* PlaneClipTriangle(lookDir, {0, 0, 0.5}, tri); */
 
       vec3 q0 = tri.verticies[1].position - tri.verticies[0].position;
       vec3 q1 = tri.verticies[2].position - tri.verticies[0].position;
       vec3 normal = Cross(q0, q1);
       normal.normalize();
-      // TODO: fix this
-      float theta = normal * lookDir;
+
+      // backface culling
+      //  TODO: fix this
+      float theta = normal * (tri.verticies[0].position - cameraPosition);
 
       if (theta < 0) {
         for (size_t i = 0; i < 3; i++) {
@@ -141,9 +148,9 @@ int main(int argc, char **argv) {
           //
           tri.verticies[i].position = tri.verticies[i].position * viewMatrix;
         }
-
+        // znear clipping
         std::vector<triangle> clippedTriangles =
-            PlaneClipTriangle(lookDir, {0, 0, 0.5}, tri);
+            PlaneClipTriangle({0, 0, 1}, {0, 0, 2.5}, tri);
         triangle projectedTriangle;
         for (auto &clippedTri : clippedTriangles) {
           for (size_t i = 0; i < 3; i++) {
@@ -205,7 +212,8 @@ int main(int argc, char **argv) {
         finalvert.position.x = (vert.position.x + 1) * 0.5 * WINDOW_WIDTH;
         finalvert.position.y =
             WINDOW_HEIGHT - (vert.position.y + 1) * 0.5 * WINDOW_HEIGHT;
-        uint8_t color = ln * 255.0;
+        ln = ln < 0 ? 0 : ln;
+        uint8_t color = ln * 255;
         finalvert.color = {color, color, color, 0xff};
         finalvert.tex_coord = {0};
         vertexToRender[k++] = finalvert;
@@ -219,9 +227,6 @@ int main(int argc, char **argv) {
     fpsTimer->displayFPS();
     SDL_RenderPresent(gRenderer);
     fYaw += 0.02;
-    /* quit = true; */
-    /* fBank += 0.12; */
-    /* fPitch += 0.009; */
   }
 
   close_program();
@@ -247,7 +252,8 @@ void init() {
     exit(1);
   }
 
-  gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
+  gRenderer = SDL_CreateRenderer(
+      gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   if (!gRenderer) {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
     exit(1);
