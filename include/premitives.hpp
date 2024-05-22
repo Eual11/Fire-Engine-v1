@@ -139,7 +139,7 @@ std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
     vertex out_vert2 = outsideVertcies[1];
 
     triangle newtri;
-    newtri.color = {1, 0, 0};
+    /* newtri.color = {1, 0, 0}; */
     newtri.verticies[0] = in_vert1;
     newtri.verticies[1] = vertex(LineIntersectPlane(
         plane_n, plane_p, in_vert1.position, out_vert1.position));
@@ -149,7 +149,7 @@ std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
     vec3 q1 = newtri.verticies[2].position - newtri.verticies[0].position;
     vec3 normal = Cross(q0, q1);
     normal.normalize();
-    newtri.normal = normal;
+    /* newtri.normal = normal; */
 
     clippedTriangles.push_back(newtri);
   } else if (insideVerticesCount == 2 && outsideVertciesCount == 1) {
@@ -161,8 +161,8 @@ std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
 
     newtri1.verticies[1] = insideVertices[1];
 
-    newtri1.color = {0, 1, 0};
-    newtri2.color = {0, 0, 1};
+    /* newtri1.color = {0, 1, 0}; */
+    /* newtri2.color = {0, 0, 1}; */
     vertex newvert1 =
         vertex(LineIntersectPlane(plane_n, plane_p, insideVertices[0].position,
                                   outsideVertcies[0].position));
@@ -177,13 +177,13 @@ std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
     vec3 q1 = newtri1.verticies[2].position - newtri1.verticies[0].position;
     vec3 normal = Cross(q0, q1);
     normal.normalize();
-    newtri1.normal = normal;
+    /* newtri1.normal = normal; */
 
     q0 = newtri2.verticies[1].position - newtri2.verticies[0].position;
     q1 = newtri2.verticies[2].position - newtri2.verticies[0].position;
     normal = Cross(q0, q1);
     normal.normalize();
-    newtri2.normal = normal;
+    /* newtri2.normal = normal; */
 
     clippedTriangles.push_back(newtri1);
     clippedTriangles.push_back(newtri2);

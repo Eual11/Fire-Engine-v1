@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   FPSTimer *fpsTimer = new FPSTimer(fpsTexture, gFont, col);
 
   mesh cube;
-  cube.LoadObj("./assets/objects/mountains.obj");
+  cube.LoadObj("./assets/objects/Suzanne.obj");
   constexpr float zNear = 0.1;
   constexpr float zFar = 9;
   constexpr float t = 80.0 * (3.1415 / 180);
@@ -66,46 +66,46 @@ int main(int argc, char **argv) {
         case SDLK_UP: {
           vec3 upVec = {viewMatrix.m[0][1], viewMatrix.m[1][1],
                         viewMatrix.m[2][1]};
-          cameraPosition += upVec * 0.2;
+          cameraPosition += upVec * 0.5;
           break;
         }
         case SDLK_DOWN: {
           vec3 upVec = {viewMatrix.m[0][1], viewMatrix.m[1][1],
                         viewMatrix.m[2][1]};
-          cameraPosition += upVec * -0.2;
+          cameraPosition += upVec * -0.5;
           break;
         }
         case SDLK_w: {
           vec3 forwardVec = {viewMatrix.m[0][2], viewMatrix.m[1][2],
                              viewMatrix.m[2][2]};
-          cameraPosition += forwardVec * 0.2;
+          cameraPosition += forwardVec * 0.5;
           break;
         }
         case SDLK_s: {
           vec3 forwardVec = {viewMatrix.m[0][2], viewMatrix.m[1][2],
                              viewMatrix.m[2][2]};
-          cameraPosition += forwardVec * -0.2;
+          cameraPosition += forwardVec * -0.5;
           break;
         }
         case SDLK_a: {
           vec3 rightVec = {viewMatrix.m[0][0], viewMatrix.m[1][0],
                            viewMatrix.m[2][0]};
-          cameraPosition += rightVec * 0.2;
+          cameraPosition += rightVec * 0.5;
           break;
         }
         case SDLK_d: {
           vec3 rightVec = {viewMatrix.m[0][0], viewMatrix.m[1][0],
                            viewMatrix.m[2][0]};
-          cameraPosition += rightVec * -0.2;
+          cameraPosition += rightVec * -0.5;
           break;
         }
         case SDLK_e: {
-          fTargetYaw -= 0.02;
+          fTargetYaw -= 0.2;
           break;
         }
         case SDLK_r: {
 
-          fTargetYaw += 0.02;
+          fTargetYaw += 0.2;
           break;
         }
         }
@@ -218,8 +218,10 @@ int main(int argc, char **argv) {
             newTrianglesCount = listTriangles.size();
           }
 
-          for (auto &tr : listTriangles)
+          for (auto &tr : listTriangles) {
+            tr.normal = normal;
             projectedMesh.push_back(tr);
+          }
         }
       }
     }
@@ -253,8 +255,7 @@ int main(int argc, char **argv) {
         // calculating basic lambertain lighting using per-triangle normals,
         // this will obviously result in a very janky flat shading, but this is
         // part of the learnign process
-        float ln = -vec3{0, -1, 0} * tri.normal;
-        ln = 1;
+        float ln = -lookDir * tri.normal;
         finalvert.position.x = (vert.position.x + 1) * 0.5 * WINDOW_WIDTH;
         finalvert.position.y =
             WINDOW_HEIGHT - (vert.position.y + 1) * 0.5 * WINDOW_HEIGHT;
