@@ -7,6 +7,7 @@
 #include <Utils/FPSTimer.hpp>
 #include <Utils/Texture.hpp>
 #include <algorithm>
+#include <list>
 
 #include <stdint.h>
 #include <uml/mat4x4.h>
@@ -17,6 +18,7 @@
 #include <vector>
 constexpr int WINDOW_WIDTH = 640;
 constexpr int WINDOW_HEIGHT = 480;
+constexpr bool RENDER_SKELETON = false;
 SDL_Window *gWindow = nullptr;
 SDL_Renderer *gRenderer = nullptr;
 TTF_Font *gFont = nullptr;
@@ -35,7 +37,7 @@ int main(int argc, char **argv) {
   FPSTimer *fpsTimer = new FPSTimer(fpsTexture, gFont, col);
 
   mesh cube;
-  cube.LoadObj("./assets/objects/teapot.obj");
+  cube.LoadObj("./assets/objects/mountains.obj");
   constexpr float zNear = 0.1;
   constexpr float zFar = 9;
   constexpr float t = 80.0 * (3.1415 / 180);
@@ -98,13 +100,11 @@ int main(int argc, char **argv) {
           break;
         }
         case SDLK_e: {
-          /* printf("(%f, %f, %f)\n", lookDir.x, lookDir.y, lookDir.z); */
           fTargetYaw -= 0.02;
           break;
         }
         case SDLK_r: {
 
-          /* printf("(%f, %f, %f)\n", lookDir.x, lookDir.y, lookDir.z); */
           fTargetYaw += 0.02;
           break;
         }
@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
         }
         // znear clipping
         std::vector<triangle> clippedTriangles =
-            PlaneClipTriangle({0, 0, 1}, {0, 0, 2.5}, tri);
+            PlaneClipTriangle({0, 0, 1}, {0, 0, 1.1}, tri);
         triangle projectedTriangle;
         for (auto &clippedTri : clippedTriangles) {
           for (size_t i = 0; i < 3; i++) {
@@ -173,7 +173,53 @@ int main(int argc, char **argv) {
           }
 
           projectedTriangle.normal = normal;
-          projectedMesh.push_back(projectedTriangle);
+          projectedTriangle.color = clippedTri.color;
+
+          std::list<triangle> listTriangles;
+          listTriangles.push_back(projectedTriangle);
+          uint8_t newTrianglesCount = 1;
+
+          for (uint8_t p = 0; p < 4; p++) {
+            while (newTrianglesCount > 0) {
+              triangle test = listTriangles.front();
+              std::vector<triangle> newTriangles;
+              listTriangles.pop_front();
+              newTrianglesCount--;
+
+              switch (p) {
+              case 0: {
+                // left screen edge
+                newTriangles =
+                    PlaneClipTriangle({1.0, 0, 0}, {-1.0, 0, 0}, test);
+                break;
+              }
+              case 1: {
+                // top screen edge
+
+                newTriangles = PlaneClipTriangle({0, -1, 0}, {0, 1.0, 0}, test);
+                break;
+              }
+              case 2: {
+                // right screen edge
+                newTriangles = PlaneClipTriangle({-1, 0, 0}, {1.0, 0, 0}, test);
+                break;
+              }
+              case 3: {
+                // bottom screen edge
+                newTriangles = PlaneClipTriangle({0, 1, 0}, {0, -1.0, 0}, test);
+                break;
+              }
+              }
+
+              for (auto &tr : newTriangles) {
+                listTriangles.push_back(tr);
+              }
+            }
+            newTrianglesCount = listTriangles.size();
+          }
+
+          for (auto &tr : listTriangles)
+            projectedMesh.push_back(tr);
         }
       }
     }
@@ -198,8 +244,7 @@ int main(int argc, char **argv) {
     size_t projectedMeshTriCount = projectedMesh.size();
     vertexToRender.resize(projectedMeshTriCount * 3);
     size_t k = 0;
-    for (size_t i = 0; i < projectedMeshTriCount; i++) {
-      const triangle &tri = projectedMesh[i];
+    for (auto &tri : projectedMesh) {
 
       for (int j = 0; j < 3; j++) {
         const vertex &vert = tri.verticies[j];
@@ -208,24 +253,48 @@ int main(int argc, char **argv) {
         // calculating basic lambertain lighting using per-triangle normals,
         // this will obviously result in a very janky flat shading, but this is
         // part of the learnign process
-        float ln = -lookDir * tri.normal;
+        float ln = -vec3{0, -1, 0} * tri.normal;
+        ln = 1;
         finalvert.position.x = (vert.position.x + 1) * 0.5 * WINDOW_WIDTH;
         finalvert.position.y =
             WINDOW_HEIGHT - (vert.position.y + 1) * 0.5 * WINDOW_HEIGHT;
         ln = ln < 0 ? 0 : ln;
-        uint8_t color = ln * 255;
-        finalvert.color = {color, color, color, 0xff};
+        ln *= 255;
+        finalvert.color = {static_cast<uint8_t>(tri.color.x * ln),
+                           static_cast<uint8_t>(tri.color.y * ln),
+                           static_cast<uint8_t>(tri.color.z * ln), 0xff};
+
         finalvert.tex_coord = {0};
         vertexToRender[k++] = finalvert;
+        tri.verticies[j].position.x = finalvert.position.x;
+        tri.verticies[j].position.y = finalvert.position.y;
+      }
+      //    tri.verticies
+      if (RENDER_SKELETON) {
+        SDL_SetRenderDrawColor(gRenderer, 0xff * tri.color.x,
+                               0xff * tri.color.y, 0xff * tri.color.z, 0xFF);
+
+        SDL_RenderDrawLineF(
+            gRenderer, tri.verticies[0].position.x, tri.verticies[0].position.y,
+            tri.verticies[1].position.x, tri.verticies[1].position.y);
+        SDL_RenderDrawLineF(
+            gRenderer, tri.verticies[0].position.x, tri.verticies[0].position.y,
+            tri.verticies[2].position.x, tri.verticies[2].position.y);
+        SDL_RenderDrawLineF(
+            gRenderer, tri.verticies[2].position.x, tri.verticies[2].position.y,
+            tri.verticies[1].position.x, tri.verticies[1].position.y);
       }
     }
 
     SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
-    SDL_RenderClear(gRenderer);
-    SDL_RenderGeometry(gRenderer, nullptr, vertexToRender.data(),
-                       vertexToRender.size(), nullptr, 0);
+
+    if (!RENDER_SKELETON) {
+      SDL_RenderGeometry(gRenderer, nullptr, vertexToRender.data(),
+                         vertexToRender.size(), nullptr, 0);
+    }
     fpsTimer->displayFPS();
     SDL_RenderPresent(gRenderer);
+    SDL_RenderClear(gRenderer);
     fYaw += 0.02;
   }
 
@@ -252,8 +321,7 @@ void init() {
     exit(1);
   }
 
-  gRenderer = SDL_CreateRenderer(
-      gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+  gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
   if (!gRenderer) {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
     exit(1);
