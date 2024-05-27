@@ -85,3 +85,10 @@ mat4x4 test(mat4x4 mat) {
 }
 
 ```
+
+
+### Current State
+- 5/27/2024
+- currently the "engine" only supports a single object being renderered with a very simple light and movable camera. 
+so the whole application can be abstracted as a world, an object to be rendererd, a directional light source, and a simple camera and a renderer that renders everything to the back buffer
+- 
