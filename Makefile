@@ -2,7 +2,7 @@ SRC = ./src/test2.cpp
 # SRC:= ./src/tex_test.cpp
 OBJ_NAME = e
 
-CFLAGS:= -g -O3  -Wall -Wextra -Wpedantic -std=c++17
+CFLAGS:= -g -Wall -Wextra -Wpedantic -std=c++17
 LIB_PATH:= -L"${C_LIBRARY_PATH}"
 
 LINKER_FLAGS:= -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lumlvec2 -lumlvec3 -lumlmat4x4 -lumlmat3x3 -lumltransform -lumlutils
