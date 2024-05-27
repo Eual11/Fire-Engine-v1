@@ -1,21 +1,21 @@
-#include "../include/premitives.hpp"
+#include "../include/FireEngine/Camera.hpp"
+#include "../include/FireEngine/Directional_Light.hpp"
+#include "../include/FireEngine/premitives.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_error.h>
-#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_render.h>
 #include <Timer.hpp>
 #include <Utils/FPSTimer.hpp>
 #include <Utils/Texture.hpp>
 #include <algorithm>
 #include <list>
-
-#include <stdint.h>
 #include <uml/mat4x4.h>
 #include <uml/transform.h>
 #include <uml/vec2.h>
 #include <uml/vec3.h>
 #include <uml/vec4.h>
 #include <vector>
+
 constexpr int WINDOW_WIDTH = 640;
 constexpr int WINDOW_HEIGHT = 480;
 constexpr bool RENDER_SKELETON = false;
@@ -26,33 +26,38 @@ SDL_Texture *gTexture = nullptr;
 void init();
 void close_program();
 float DISABLE_BACKFACE_CULLING = false;
-
+using namespace FireEngine;
 int main(int argc, char **argv) {
   init();
 
   printf("%s program running with %d args\n", argv[0], argc);
+  // FPS TIMER
   SDL_Color col = {123, 22, 88};
 
   ETexture *fpsTexture = new ETexture(gRenderer, "test", gFont, col);
   FPSTimer *fpsTimer = new FPSTimer(fpsTexture, gFont, col);
 
-  mesh cube;
-  cube.LoadObj("./assets/objects/Suzanne.obj");
+  // Object 3D (Mesh)
+
+  Object3D cube;
+  cube.LoadFromObj("./assets/objects/teapot.obj");
+  DirectionalLight direLight(vec3(0, -1, 0), vec3(1.0, 0.5, 0.5), 1);
+  cube.setRotation(M_PI / 3, 0, 0);
+  cube.setPosition({0, 0, 2});
   constexpr float zNear = 0.1;
   constexpr float zFar = 9;
   constexpr float t = 80.0 * (3.1415 / 180);
   constexpr float fFov = t;
 
+  // Camera
   float fYaw = 0.0f;
   float fTargetYaw = 0.0f;
   float fBank = 0.0f;
   float fPitch = 0.0f;
   float fAspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
-  mat4x4 clipMatrix = ClipPrespective(fAspectRatio, fFov, zNear, zFar);
-  mat4x4 viewMatrix;
+  Camera perCamera = PerspectiveCamera(fAspectRatio, fFov, zNear, zFar);
+  mat4x4 clipMatrix = perCamera.getProjectionTransform();
 
-  vec3 lookDir = {0, 0, 1}; // we are looking toward z direction
-  vec3 cameraPosition = {0, 0, 0};
   bool quit = false;
   SDL_Event e;
   fpsTimer->resetTimer();
@@ -64,93 +69,64 @@ int main(int argc, char **argv) {
       if (e.type == SDL_KEYDOWN) {
         switch (e.key.keysym.sym) {
         case SDLK_UP: {
-          vec3 upVec = {viewMatrix.m[0][1], viewMatrix.m[1][1],
-                        viewMatrix.m[2][1]};
-          cameraPosition += upVec * 0.5;
+          perCamera.Translate(0, 0.2, 0);
           break;
         }
         case SDLK_DOWN: {
-          vec3 upVec = {viewMatrix.m[0][1], viewMatrix.m[1][1],
-                        viewMatrix.m[2][1]};
-          cameraPosition += upVec * -0.5;
+          perCamera.Translate(0, -0.2, 0);
           break;
         }
         case SDLK_w: {
-          vec3 forwardVec = {viewMatrix.m[0][2], viewMatrix.m[1][2],
-                             viewMatrix.m[2][2]};
-          cameraPosition += forwardVec * 0.5;
+          perCamera.Translate(0, 0, 0.2);
           break;
         }
         case SDLK_s: {
-          vec3 forwardVec = {viewMatrix.m[0][2], viewMatrix.m[1][2],
-                             viewMatrix.m[2][2]};
-          cameraPosition += forwardVec * -0.5;
+          perCamera.Translate(0, 0, -0.2);
           break;
         }
         case SDLK_a: {
-          vec3 rightVec = {viewMatrix.m[0][0], viewMatrix.m[1][0],
-                           viewMatrix.m[2][0]};
-          cameraPosition += rightVec * 0.5;
+          perCamera.Translate(-0.2, 0, 0);
           break;
         }
         case SDLK_d: {
-          vec3 rightVec = {viewMatrix.m[0][0], viewMatrix.m[1][0],
-                           viewMatrix.m[2][0]};
-          cameraPosition += rightVec * -0.5;
+          perCamera.Translate(0.2, 0, 0);
           break;
         }
         case SDLK_e: {
           fTargetYaw -= 0.2;
+          perCamera.setOrientation(fTargetYaw, 0, 0);
           break;
         }
         case SDLK_r: {
 
           fTargetYaw += 0.2;
+          perCamera.setOrientation(fTargetYaw, 0, 0);
           break;
         }
         }
       }
     }
-    mat4x4 ry = RotateY(fYaw);
-    mat4x4 rx = RotateX(0.0);
-    mat4x4 rz = RotateZ(fBank);
-    vec3 target = {0, 0, 1};
-    target = target * RotateY(fTargetYaw);
-    lookDir = target;
-    ;
-    lookDir.normalize();
-    mat4x4 final_transform = rx * ry * rz;
-    viewMatrix = LookAt(cameraPosition, target + cameraPosition, {0, 1, 0});
+    // object transform
+
+    // camera
     std::vector<triangle> projectedMesh;
+    // Rendering operation
     for (auto tri : cube.triangles) {
 
       // transforming each vertex of the triangle
-      for (size_t i = 0; i < 3; i++) {
 
-        // very basic world transform
-        tri.verticies[i].position = tri.verticies[i].position;
-        tri.verticies[i].position.z += 11;
-      }
-
-      vec3 q0 = tri.verticies[1].position - tri.verticies[0].position;
-      vec3 q1 = tri.verticies[2].position - tri.verticies[0].position;
-      vec3 normal = Cross(q0, q1);
-      normal.normalize();
-
+      tri = tri * cube.transform;
+      vec3 normal = tri.comptueNormal();
       // backface culling
       //  TODO: fix this
-      float theta = normal * (tri.verticies[0].position - cameraPosition);
+      float theta = normal * (tri.verticies[0].position - perCamera.position);
 
       if (theta < 0) {
-        for (size_t i = 0; i < 3; i++) {
 
-          // view transform
-          //
-          tri.verticies[i].position = tri.verticies[i].position * viewMatrix;
-        }
+        tri = tri * perCamera.getViewTransform();
         // znear clipping
         std::vector<triangle> clippedTriangles =
-            PlaneClipTriangle({0, 0, 1}, {0, 0, 1.1}, tri);
+            PlaneClipTriangle({0, 0, 1}, {0, 0, zNear}, tri);
         triangle projectedTriangle;
         for (auto &clippedTri : clippedTriangles) {
           for (size_t i = 0; i < 3; i++) {
@@ -255,15 +231,16 @@ int main(int argc, char **argv) {
         // calculating basic lambertain lighting using per-triangle normals,
         // this will obviously result in a very janky flat shading, but this is
         // part of the learnign process
-        float ln = -lookDir * tri.normal;
+        float ln =
+            -direLight.getDirection() * tri.normal * direLight.getIntensity();
         finalvert.position.x = (vert.position.x + 1) * 0.5 * WINDOW_WIDTH;
         finalvert.position.y =
             WINDOW_HEIGHT - (vert.position.y + 1) * 0.5 * WINDOW_HEIGHT;
-        ln = ln < 0 ? 0 : ln;
-        ln *= 255;
-        finalvert.color = {static_cast<uint8_t>(tri.color.x * ln),
-                           static_cast<uint8_t>(tri.color.y * ln),
-                           static_cast<uint8_t>(tri.color.z * ln), 0xff};
+        FE_CLAMP(ln, 0, 1);
+        vec3 color = direLight.getColor() & tri.color * ln * UINT8_MAX;
+        finalvert.color = {static_cast<uint8_t>(color.x),
+                           static_cast<uint8_t>(color.y),
+                           static_cast<uint8_t>(color.z), 0xff};
 
         finalvert.tex_coord = {0};
         vertexToRender[k++] = finalvert;
