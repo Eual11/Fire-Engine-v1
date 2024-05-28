@@ -2,13 +2,12 @@
 #include "../include/FireEngine/Light.hpp"
 #include "../include/FireEngine/premitives.hpp"
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_error.h>
-#include <SDL2/SDL_render.h>
 #include <Timer.hpp>
 #include <Utils/FPSTimer.hpp>
 #include <Utils/Texture.hpp>
 #include <algorithm>
 #include <list>
+#include <stdio.h>
 #include <uml/mat4x4.h>
 #include <uml/transform.h>
 #include <uml/vec2.h>
@@ -41,9 +40,8 @@ int main(int argc, char **argv) {
 
   Object3D cube;
   cube.LoadFromObj("./assets/objects/teapot.obj");
-  DirectionalLight direLight(vec3(0, -1, 0), vec3(1.0, 0.5, 0.5), 1);
-  cube.setRotation(M_PI / 3, 0, 0);
   cube.setPosition({0, 0, 2});
+  DirectionalLight direLight(vec3(0, -1, 0), vec3(1.0, 0.5, 0.5), 1);
   constexpr float zNear = 0.1;
   constexpr float zFar = 9;
   constexpr float t = 80.0 * (3.1415 / 180);
@@ -52,10 +50,12 @@ int main(int argc, char **argv) {
   // Camera
   float fYaw = 0.0f;
   float fTargetYaw = 0.0f;
+  float fBank = 0.0f;
+  float fPitch = 0.0f;
   float fAspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
   Camera perCamera = PerspectiveCamera(fAspectRatio, fFov, zNear, zFar);
-  mat4x4 clipMatrix = perCamera.getProjectionTransform();
 
+  mat4x4 clipMatrix = perCamera.getProjectionTransform();
   bool quit = false;
   SDL_Event e;
   fpsTimer->resetTimer();
@@ -229,21 +229,20 @@ int main(int argc, char **argv) {
         // calculating basic lambertain lighting using per-triangle normals,
         // this will obviously result in a very janky flat shading, but this is
         // part of the learnign process
-        float ln =
-            -direLight.getDirection() * tri.normal * direLight.getIntensity();
+        float ln = vec3{0, 0, 1} * tri.normal * 1;
         finalvert.position.x = (vert.position.x + 1) * 0.5 * WINDOW_WIDTH;
         finalvert.position.y =
             WINDOW_HEIGHT - (vert.position.y + 1) * 0.5 * WINDOW_HEIGHT;
         FE_CLAMP(ln, 0, 1);
-        vec3 color = direLight.getColor() & tri.color * ln * UINT8_MAX;
+        vec3 color = direLight.calculateLambertian(vert.position, tri.normal);
+        color = (color & tri.color) * 255.0;
         finalvert.color = {static_cast<uint8_t>(color.x),
                            static_cast<uint8_t>(color.y),
                            static_cast<uint8_t>(color.z), 0xff};
 
-        finalvert.tex_coord = {0};
-        vertexToRender[k++] = finalvert;
         tri.verticies[j].position.x = finalvert.position.x;
         tri.verticies[j].position.y = finalvert.position.y;
+        vertexToRender[k++] = finalvert;
       }
       //    tri.verticies
       if (RENDER_SKELETON) {
