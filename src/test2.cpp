@@ -1,5 +1,5 @@
 #include "../include/FireEngine/Camera.hpp"
-#include "../include/FireEngine/Directional_Light.hpp"
+#include "../include/FireEngine/Light.hpp"
 #include "../include/FireEngine/premitives.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_error.h>
