@@ -15,6 +15,10 @@
 #define FE_CLAMP(val, MIN, MAX)                                                \
   val = val < MIN ? MIN : val;                                                 \
   val = val > MAX ? MAX : val
+#define FE_MIN(val1, val2) ((val1 < val2) ? (val1) : (val2))
+#define FE_MAX(val1, val2) ((val1 > val2) ? (val1) : (val2))
+#define FE_DEG_TO_RAD(val) ((M_PI * val / 180.0))
+#define FE_RAD_TO_DEG(val) (180.0 * (val / M_PI))
 namespace FireEngine {
 // very simple vertex class
 struct vertex {
@@ -116,7 +120,17 @@ struct Object3D {
     float y = transform.m[3][1];
     float z = transform.m[3][2];
 
-    transform = RotateEuler(fYaw, fPitch, fRoll);
+    transform = transform * RotateEuler(fYaw, fPitch, fRoll);
+    transform.m[3][0] = x;
+    transform.m[3][1] = y;
+    transform.m[3][2] = z;
+  }
+  void setScale(float xs, float ys, float zs) {
+    float x = transform.m[3][0];
+    float y = transform.m[3][1];
+    float z = transform.m[3][2];
+
+    transform = transform * ScaleXYZ(xs, ys, zs);
     transform.m[3][0] = x;
     transform.m[3][1] = y;
     transform.m[3][2] = z;

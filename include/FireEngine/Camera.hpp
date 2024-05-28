@@ -11,6 +11,10 @@ struct Camera {
   vec3 forward;
   vec3 up;
   vec3 right;
+  float aspectRatio;
+  float fov;
+  float zNear;
+  float zFar;
   Camera() {
     forward = {0, 0, 1};
     up = {0, 1, 0};
@@ -20,6 +24,14 @@ struct Camera {
   }
   mat4x4 viewTransform;
   mat4x4 projectionTransform;
+  Camera(float _aspectRatio, float _fov, float _zNear, float _zFar)
+      : aspectRatio(_aspectRatio), fov(_fov), zNear(_zNear), zFar(_zFar) {
+    forward = {0, 0, 1};
+    up = {0, 1, 0};
+    right = {1, 0, 0};
+    position = {0, 0, 0};
+    updateViewTransform();
+  }
 
   inline mat4x4 getViewTransform() { return viewTransform; }
   inline mat4x4 getProjectionTransform() { return projectionTransform; }
@@ -83,15 +95,13 @@ protected:
 };
 
 struct PerspectiveCamera : public Camera {
-  float aspectRatio;
-  float fov;
-  float zFar;
-  float zNear;
-  PerspectiveCamera(float _aspectRatio, float _fov, float _zNear, float _zFar)
-      : aspectRatio(_aspectRatio), fov(_fov), zFar(_zFar), zNear(_zNear) {
+  PerspectiveCamera(float _aspectRatio, float _fov, float _zNear, float _zFar) {
 
-    Camera();
-
+    Camera(_aspectRatio, _fov, _zNear, _zFar);
+    aspectRatio = _aspectRatio;
+    fov = _fov;
+    zNear = _zNear;
+    zFar = _zFar;
     projectionTransform = ClipPrespective(aspectRatio, fov, zNear, zFar);
   };
   inline float getAspectRation() { return aspectRatio; }
@@ -100,14 +110,13 @@ struct PerspectiveCamera : public Camera {
   inline float getZFar() { return zFar; }
 };
 struct OrthogonalCamera : public Camera {
-  float aspectRatio;
-  float fov;
-  float zNear;
-  float zFar;
-  OrthogonalCamera(float _aspectRatio, float _fov, float _zNear, float _zFar)
-      : aspectRatio(_aspectRatio), fov(_fov), zNear(_zNear), zFar(_zFar) {
+  OrthogonalCamera(float _aspectRatio, float _fov, float _zNear, float _zFar) {
 
-    Camera();
+    Camera(_aspectRatio, _fov, _zNear, _zFar);
+    aspectRatio = _aspectRatio;
+    fov = _fov;
+    zNear = _zNear;
+    zFar = _zFar;
 
     projectionTransform = ClipOrthogonal(aspectRatio, fov, zNear, zFar);
   };
