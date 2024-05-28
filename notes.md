@@ -92,3 +92,15 @@ mat4x4 test(mat4x4 mat) {
 - currently the "engine" only supports a single object being renderered with a very simple light and movable camera. 
 so the whole application can be abstracted as a world, an object to be rendererd, a directional light source, and a simple camera and a renderer that renders everything to the back buffer
 - 
+
+
+### Current state
+
+- 5/28/2024
+- abstracting the renderer, is causing errors
+- the renderer is working, lesss gooo. 
+- 100+ FPS!!!
+- **NOTE:** there is an elongation and buldging when the object is near the screen edges 
+- when rendering multiple objects, the objects move at the same time, this is ofc because there is literally no hierarchy  between the elements 
+- moving the camera somehow(it seems so) to move the objects as well!
+
