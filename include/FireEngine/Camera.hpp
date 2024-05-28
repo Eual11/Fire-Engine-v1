@@ -94,6 +94,10 @@ struct PerspectiveCamera : public Camera {
 
     projectionTransform = ClipPrespective(aspectRatio, fov, zNear, zFar);
   };
+  inline float getAspectRation() { return aspectRatio; }
+  inline float getFov() { return fov; }
+  inline float getZNear() { return zNear; }
+  inline float getZFar() { return zFar; }
 };
 struct OrthogonalCamera : public Camera {
   float aspectRatio;
@@ -107,6 +111,10 @@ struct OrthogonalCamera : public Camera {
 
     projectionTransform = ClipOrthogonal(aspectRatio, fov, zNear, zFar);
   };
+  inline float getAspectRation() { return aspectRatio; }
+  inline float getFov() { return fov; }
+  inline float getZNear() { return zNear; }
+  inline float getZFar() { return zFar; }
 };
 
 } // namespace FireEngine

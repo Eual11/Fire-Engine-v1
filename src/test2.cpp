@@ -52,8 +52,6 @@ int main(int argc, char **argv) {
   // Camera
   float fYaw = 0.0f;
   float fTargetYaw = 0.0f;
-  float fBank = 0.0f;
-  float fPitch = 0.0f;
   float fAspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
   Camera perCamera = PerspectiveCamera(fAspectRatio, fFov, zNear, zFar);
   mat4x4 clipMatrix = perCamera.getProjectionTransform();
