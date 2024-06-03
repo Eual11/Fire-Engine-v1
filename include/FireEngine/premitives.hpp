@@ -1,5 +1,7 @@
 #ifndef _PERMITIVES_HPP
 #define _PERMITIVES_HPP
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_render.h>
 #include <fstream>
 #include <initializer_list>
 #include <sstream>
@@ -12,6 +14,7 @@
 #include <uml/vec4.h>
 #include <vector>
 
+#define Logvec(a) printf("(%f, %f, %f)\n", a.x, a.y, a.z)
 #define FE_CLAMP(val, MIN, MAX)                                                \
   val = val < MIN ? MIN : val;                                                 \
   val = val > MAX ? MAX : val
@@ -102,7 +105,9 @@ struct triangle {
 
 struct Object3D {
   std::vector<triangle> triangles;
+  SDL_Texture *imageTexture = nullptr;
   mat4x4 transform;
+  std::string objName = "untitled";
   Object3D() { transform = IdentityMat4x4(); }
   Object3D(const vec3 &pos) { transform = TranslateXYZ(pos.x, pos.y, pos.z); }
   Object3D(float fYaw, float fPitch, float fRoll) {
@@ -150,9 +155,13 @@ struct Object3D {
 
     std::string line;
     std::vector<vertex> vertices;
+    std::vector<vec2> uvs;
 
     while (std::getline(file, line, '\n')) {
-      if (line[0] == 'v') {
+      if (line[0] == 'o') {
+        objName = line.substr(2);
+      }
+      if (line.substr(0, 2) == "v ") {
         // defining verticies
         std::stringstream stream(line);
 
@@ -160,25 +169,63 @@ struct Object3D {
         stream >> junk >> x >> y >> z;
 
         vertices.push_back(vec3(x, y, z));
+
+      } else if (line.substr(0, 2) == "vt") {
+
+        std::stringstream stream(line);
+        float x, y;
+        stream >> junk >> x >> y;
+        uvs.push_back(vec2(x, y));
       }
       if (line[0] == 'f') {
         // loading face data assuming the faces are triangualted
+        line = line.substr(2);
+        triangle newTri;
+        std::stringstream lineStream(line);
+        // vertex data
+        std::string vertData;
+        int vertIndex = 0;
+        while (std::getline(lineStream, vertData, ' ')) {
 
-        size_t id1, id2, id3;
+          std::string vid;
+          int i = 0;
+          std::stringstream vertDataStream(vertData);
 
-        std::stringstream stream(line);
-        stream >> junk >> id1 >> id2 >> id3;
-        id1--;
-        id2--;
-        id3--;
-        if (id1 < vertices.size() && id2 < vertices.size() &&
-            id3 < vertices.size()) {
-          this->triangles.push_back(
-              {vertices[id1], vertices[id2], vertices[id3]});
+          while (std::getline(vertDataStream, vid, '/')) {
+            switch (i) {
+            case 0: {
+              // vertex index
+              if (vid.size()) {
+                newTri.verticies[vertIndex].position =
+                    vertices[std::stoi(vid) - 1].position;
+              }
+              break;
+            }
+            case 1: {
+              // uv coord
+              if (vid.size()) {
+
+                newTri.verticies[vertIndex].uv = uvs[std::stoi(vid) - 1];
+              }
+              break;
+            }
+            case 2: {
+              // normal
+              break;
+            }
+            }
+            i++;
+          }
+
+          vertIndex++;
         }
+        this->triangles.push_back(newTri);
       }
     }
+
+    std::cout << "Object3D " << objName << " Loaded\n";
   }
+  inline void SetImageTexture(SDL_Texture *_tex) { imageTexture = _tex; }
 };
 
 std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,

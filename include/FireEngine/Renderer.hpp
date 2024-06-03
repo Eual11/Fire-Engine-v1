@@ -3,6 +3,7 @@
 
 #include "Camera.hpp"
 #include "World.hpp"
+#include "premitives.hpp"
 #include <SDL2/SDL_render.h>
 #include <algorithm>
 #include <list>
@@ -12,6 +13,7 @@ enum FireEngine_RendererFlags {
   FireEngine_RendererFlags_DisableBackfaceCulling =
       1 << 1, // flag to disable backface culling
   FireEngine_RendererFlags_RenderWireframe = 1 << 2,
+  FireEngine_RendererFlags_EnableTextures = 1 << 3
 };
 namespace FireEngine {
 
@@ -46,11 +48,18 @@ public:
             flags & FireEngine_RendererFlags_DisableBackfaceCulling) {
           // view transform
           tri = tri * camera.getViewTransform();
-          // near plane clipping
-          std::vector<triangle> clippedTriangles =
-              PlaneClipTriangle({0, 0, 1}, {0, 0, camera.zNear}, tri);
-          // TODO: maybe add far plane clipping
-          //
+
+          // near and far plane clipping
+          std::vector<triangle> tempClip =
+              PlaneClipTriangle({0, 0, -1}, {0, 0, camera.zFar}, tri);
+
+          std::vector<triangle> clippedTriangles;
+          for (auto tri : tempClip) {
+            std::vector<triangle> zfarClip =
+                PlaneClipTriangle({0, 0, 1}, {0, 0, camera.zNear}, tri);
+            clippedTriangles.insert(clippedTriangles.end(), zfarClip.begin(),
+                                    zfarClip.end());
+          }
           triangle projectedTriangle;
 
           for (auto &clippedTri : clippedTriangles) {
@@ -171,8 +180,12 @@ public:
           finalvert.color = {static_cast<uint8_t>(color.x),
                              static_cast<uint8_t>(color.y),
                              static_cast<uint8_t>(color.z), 0xff};
-
-          /* finalvert.tex_coord = {0}; */
+          if (flags & FireEngine_RendererFlags_EnableTextures) {
+            finalvert.tex_coord.x = vert.uv.x;
+            finalvert.tex_coord.y = 1 - vert.uv.y;
+          } else {
+            finalvert.tex_coord = {0};
+          }
           tri.verticies[j].position.x = finalvert.position.x;
           tri.verticies[j].position.y = finalvert.position.y;
 
@@ -197,8 +210,12 @@ public:
                               tri.verticies[1].position.y);
         }
       }
+      SDL_Texture *objTexture =
+          (flags & FireEngine_RendererFlags_EnableTextures)
+              ? object->imageTexture
+              : nullptr;
       if (!(flags & FireEngine_RendererFlags_RenderWireframe)) {
-        SDL_RenderGeometry(m_Renderer, nullptr, vertexToRender.data(),
+        SDL_RenderGeometry(m_Renderer, objTexture, vertexToRender.data(),
                            vertexToRender.size(), nullptr, 0);
       }
     }
