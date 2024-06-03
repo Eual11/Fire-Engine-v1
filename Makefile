@@ -1,4 +1,4 @@
-SRC = ./src/test3.cpp
+SRC = ./src/test4.cpp
 DEMO_SRC = ./demos/demo0.cpp
 # SRC:= ./src/tex_test.cpp
 OBJ_NAME = e
