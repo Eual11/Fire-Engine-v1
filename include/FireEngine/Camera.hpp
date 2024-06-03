@@ -3,7 +3,7 @@
 
 #include "premitives.hpp"
 #include <uml/transform.h>
-
+// TODO: SOMETHING IS TERRIBLY WRONG WITH THE CAMERA
 namespace FireEngine {
 // NOTE: very inefficent, i will leave it for now
 struct Camera {
