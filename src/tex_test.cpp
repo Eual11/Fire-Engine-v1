@@ -50,7 +50,8 @@ struct triangle {
 struct mesh {
   std::vector<triangle> tris;
 };
-
+Uint32 previousTime = SDL_GetTicks();
+float deltaTime = 0.0f;
 int main(int argc, char **argv) {
   printf("Program %s running with %d args\n", argv[0], argc);
   init();
@@ -93,6 +94,10 @@ int main(int argc, char **argv) {
   SDL_Event e;
   bool quit = false;
   while (!quit) {
+    Uint32 currentTime = SDL_GetTicks();
+    deltaTime = (currentTime - previousTime) / 1000.0f; // Convert to seconds
+    previousTime = currentTime;
+    printf("%f\n", deltaTime);
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT)
         quit = true;

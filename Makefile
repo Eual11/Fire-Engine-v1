@@ -1,5 +1,6 @@
 SRC = ./src/test4.cpp
-DEMO_SRC = ./demos/demo0.cpp
+DEMO0_SRC = ./demos/demo0.cpp
+DEMO1_SRC = ./demos/demo1.cpp
 # SRC:= ./src/tex_test.cpp
 OBJ_NAME = e
 
@@ -11,5 +12,7 @@ CC := g++
 
 all: ${SRC}
 	${CC} ${SRC} ${CFLAGS} ${LIB_PATH} ${LINKER_FLAGS} -o ./build/${OBJ_NAME}
-demo:
-		${CC} ${DEMO_SRC} ${CFLAGS} ${LIB_PATH} ${LINKER_FLAGS} -o ./build/$@
+demo0:
+		${CC} ${DEMO0_SRC} ${CFLAGS} ${LIB_PATH} ${LINKER_FLAGS} -o ./build/$@
+demo1:
+		${CC} ${DEMO1_SRC} ${CFLAGS} ${LIB_PATH} ${LINKER_FLAGS} -o ./build/$@

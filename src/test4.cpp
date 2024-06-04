@@ -5,6 +5,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_render.h>
+#include <SDL2/SDL_stdinc.h>
 #include <Timer.hpp>
 #include <Utils/FPSTimer.hpp>
 #include <Utils/Texture.hpp>
@@ -18,8 +19,9 @@
 #include <uml/vec4.h>
 #include <vector>
 
-constexpr int WINDOW_WIDTH = 640;
-constexpr int WINDOW_HEIGHT = 480;
+constexpr int WINDOW_WIDTH = 1920;
+float f = 0;
+constexpr int WINDOW_HEIGHT = 1080;
 constexpr bool RENDER_SKELETON = false;
 SDL_Window *gWindow = nullptr;
 SDL_Renderer *gRenderer = nullptr;
@@ -31,6 +33,9 @@ float DISABLE_BACKFACE_CULLING = false;
 using namespace FireEngine;
 int main(int argc, char **argv) {
   init();
+  Uint32 previousTime = SDL_GetTicks();
+
+  float deltaTime = 0.0f;
 
   printf("%s program running with %d args\n", argv[0], argc);
   // FPS TIMER
@@ -44,10 +49,12 @@ int main(int argc, char **argv) {
   Object3D cube;
   SDL_Texture *tex =
       IMG_LoadTexture(gRenderer, "./assets/textures/earth_texture.jpg");
-
+  cube.setScale(10, 10, 10);
   cube.LoadFromObj("./assets/objects/earth.obj");
+  cube.setUpdateFunction([](Object3D &obj, float deltaTime) {
+    obj.setRotation(-0.2 * M_PI * deltaTime, 0, 0);
+  });
   cube.SetImageTexture(tex);
-  // cube.setRotation(M_PI * 2 / 3, 0, 0);
   DirectionalLight direLight(vec3(0, 0, 1), vec3(1.0, 1.0, 1.0), 1);
   DirectionalLight direLight2(vec3(0, -1, 0), vec3(1, 1, 1), 1);
   DirectionalLight direLight3(vec3(1, -1, 0), vec3(1, 1, 1), 1);
@@ -80,6 +87,9 @@ int main(int argc, char **argv) {
   SDL_Event e;
   fpsTimer->resetTimer();
   while (!quit) {
+    Uint32 currentTime = SDL_GetTicks();
+    deltaTime = (currentTime - previousTime) / 1000.0f; // Convert to seconds
+    previousTime = currentTime;
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT) {
         quit = true;
@@ -142,7 +152,7 @@ int main(int argc, char **argv) {
     // object transform
 
     // camera
-    renderer.Render(gamewrld, perCamera);
+    renderer.Render(gamewrld, perCamera, deltaTime);
     fpsTimer->displayFPS();
     SDL_RenderPresent(gRenderer);
     SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xff);
