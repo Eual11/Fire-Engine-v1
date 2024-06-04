@@ -16,7 +16,6 @@ enum FireEngine_RendererFlags {
   FireEngine_RendererFlags_EnableTextures = 1 << 3
 };
 namespace FireEngine {
-
 class Renderer {
 public:
   Renderer() = default;
@@ -65,16 +64,21 @@ public:
           for (auto &clippedTri : clippedTriangles) {
             for (size_t i = 0; i < 3; i++) {
               vec4 projectedVec = vec4{clippedTri.verticies[i].position, 1};
+              vec4 projectedUV = vec4{clippedTri.verticies[i].uv.x,
+                                      clippedTri.verticies[i].uv.y, 0, 1};
               projectedVec = projectedVec * camera.getProjectionTransform();
+              projectedUV *camera.getProjectionTransform();
               // prespective divide
               //
+              //
+              vertex projectedVertex;
               if (projectedVec.w != 0.0f) {
                 projectedVec.x /= projectedVec.w;
                 projectedVec.y /= projectedVec.w;
                 projectedVec.z /= projectedVec.w;
+                projectedVertex.uv = {projectedUV.x, projectedUV.y};
               }
 
-              vertex projectedVertex;
               projectedVertex.position.x = projectedVec.x;
 
               projectedVertex.position.y = projectedVec.y;
@@ -164,6 +168,7 @@ public:
           const vertex &vert = tri.verticies[j];
           SDL_Vertex finalvert;
 
+          vec3 ambientln = {0.2, 0.2, 0.2};
           finalvert.position.x =
               m_ViewPort.x + (vert.position.x + 1) * 0.5 * m_ViewPort.w;
           finalvert.position.y = m_ViewPort.y + m_ViewPort.h -
@@ -172,29 +177,37 @@ public:
           // this will obviously result in a very janky flat shading, but this
           // is part of the learnign process
           vec3 ln{0.0, 0.0, 0.0};
+          ln += ambientln;
           for (auto &light : world.Lights) {
             ln += light->calculateLambertian(vert.position, tri.normal);
           }
+          FE_CLAMP(ln.x, 0, 1);
+          FE_CLAMP(ln.y, 0, 1);
+          FE_CLAMP(ln.z, 0, 1);
           // maybe we need to clamp each color value from 0 to 1?
           vec3 color = (ln & tri.color) * 255.0f;
           finalvert.color = {static_cast<uint8_t>(color.x),
                              static_cast<uint8_t>(color.y),
                              static_cast<uint8_t>(color.z), 0xff};
           if (flags & FireEngine_RendererFlags_EnableTextures) {
-            finalvert.tex_coord.x = vert.uv.x;
+            finalvert.tex_coord.x = 1 - vert.uv.x;
             finalvert.tex_coord.y = 1 - vert.uv.y;
-          } else {
-            finalvert.tex_coord = {0};
-          }
-          tri.verticies[j].position.x = finalvert.position.x;
-          tri.verticies[j].position.y = finalvert.position.y;
 
+            FE_CLAMP(finalvert.tex_coord.x, 0, 1);
+            FE_CLAMP(finalvert.tex_coord.y, 0, 1);
+          } else {
+            finalvert.tex_coord = {0, 0};
+          }
+          if (FireEngine_RendererFlags_RenderWireframe & flags) {
+            tri.verticies[j].position.x = finalvert.position.x;
+            tri.verticies[j].position.y = finalvert.position.y;
+          }
           vertexToRender[k++] = finalvert;
         }
         //    tri.verticies
         if (FireEngine_RendererFlags_RenderWireframe & flags) {
-          SDL_SetRenderDrawColor(m_Renderer, 0xff * tri.color.x,
-                                 0xff * tri.color.y, 0xff * tri.color.z, 0xFF);
+          SDL_SetRenderDrawColor(m_Renderer, 0xff, 0x00, 0xff * tri.color.z,
+                                 0xFF);
 
           SDL_RenderDrawLineF(m_Renderer, tri.verticies[0].position.x,
                               tri.verticies[0].position.y,

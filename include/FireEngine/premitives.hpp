@@ -14,7 +14,8 @@
 #include <uml/vec4.h>
 #include <vector>
 
-#define Logvec(a) printf("(%f, %f, %f)\n", a.x, a.y, a.z)
+#define Logvec3(a) printf("(vec3: %f, %f, %f)\n", a.x, a.y, a.z)
+#define Logvec2(a) printf("vec2: (%f, %f)\n", a.x, a.y)
 #define FE_CLAMP(val, MIN, MAX)                                                \
   val = val < MIN ? MIN : val;                                                 \
   val = val > MAX ? MAX : val
@@ -229,7 +230,7 @@ struct Object3D {
 };
 
 std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
-                                        triangle in_tri) {
+                                        triangle &in_tri) {
   vertex insideVertices[3];
   vertex outsideVertcies[3];
 
@@ -257,17 +258,41 @@ std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
     vertex out_vert2 = outsideVertcies[1];
 
     triangle newtri;
-    /* newtri.color = {1, 0, 0}; */
     newtri.verticies[0] = in_vert1;
     newtri.verticies[1] = vertex(LineIntersectPlane(
         plane_n, plane_p, in_vert1.position, out_vert1.position));
+
+    // u-v
+    vec3 uv = out_vert1.position - in_vert1.position;
+    float t;
+    vec3 pu = newtri.verticies[1].position - in_vert1.position;
+
+    if (uv.x)
+      t = pu.x / uv.x;
+    else if (uv.y)
+      t = pu.y / uv.y;
+    else if (uv.z)
+      t = pu.z / uv.z;
+    newtri.verticies[1].uv = in_vert1.uv + (out_vert1.uv - in_vert1.uv) * t;
+
     newtri.verticies[2] = vertex(LineIntersectPlane(
         plane_n, plane_p, in_vert1.position, out_vert2.position));
+
+    uv = out_vert2.position - in_vert1.position;
+    pu = newtri.verticies[2].position - in_vert1.position;
+
+    if (uv.x)
+      t = pu.x / uv.x;
+    else if (uv.y)
+      t = pu.y / uv.y;
+    else if (uv.z)
+      t = pu.z / uv.z;
+    newtri.verticies[2].uv = in_vert1.uv + (out_vert2.uv - in_vert1.uv) * t;
+
     vec3 q0 = newtri.verticies[1].position - newtri.verticies[0].position;
     vec3 q1 = newtri.verticies[2].position - newtri.verticies[0].position;
     vec3 normal = Cross(q0, q1);
     normal.normalize();
-    /* newtri.normal = normal; */
 
     clippedTriangles.push_back(newtri);
   } else if (insideVerticesCount == 2 && outsideVertciesCount == 1) {
@@ -284,18 +309,51 @@ std::vector<triangle> PlaneClipTriangle(vec3 plane_n, vec3 plane_p,
     vertex newvert1 =
         vertex(LineIntersectPlane(plane_n, plane_p, insideVertices[0].position,
                                   outsideVertcies[0].position));
+
+    vec3 uv = outsideVertcies[0].position - newtri1.verticies[0].position;
+    float t;
+    vec3 pu = newvert1.position - newtri1.verticies[0].position;
+
+    if (uv.x)
+      t = pu.x / uv.x;
+    else if (uv.y)
+      t = pu.y / uv.y;
+    else if (uv.z)
+      t = pu.z / uv.z;
+    newvert1.uv = newtri1.verticies[0].uv +
+                  (outsideVertcies[0].uv - newtri1.verticies[0].uv) * t;
+
     newtri1.verticies[2] = newvert1;
 
     newtri2.verticies[0] = insideVertices[1];
     newtri2.verticies[1] =
         vertex(LineIntersectPlane(plane_n, plane_p, insideVertices[1].position,
                                   outsideVertcies[0].position));
+
     newtri2.verticies[2] = newvert1;
+
+    uv = outsideVertcies[0].position - insideVertices[1].position;
+    pu = newtri2.verticies[1].position - insideVertices[1].position;
+
+    if (uv.x)
+      t = pu.x / uv.x;
+    else if (uv.y)
+      t = pu.y / uv.y;
+    else if (uv.z)
+      t = pu.z / uv.z;
+
+    newtri2.verticies[1].uv =
+        insideVertices[1].uv +
+        (outsideVertcies[0].uv - insideVertices[1].uv) * t;
+
+    newtri1.verticies[2] = newvert1;
+
+    newtri2.verticies[0] = insideVertices[1];
+
     vec3 q0 = newtri1.verticies[1].position - newtri1.verticies[0].position;
     vec3 q1 = newtri1.verticies[2].position - newtri1.verticies[0].position;
     vec3 normal = Cross(q0, q1);
     normal.normalize();
-    /* newtri1.normal = normal; */
 
     q0 = newtri2.verticies[1].position - newtri2.verticies[0].position;
     q1 = newtri2.verticies[2].position - newtri2.verticies[0].position;

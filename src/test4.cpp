@@ -43,15 +43,15 @@ int main(int argc, char **argv) {
 
   Object3D cube;
   SDL_Texture *tex =
-      IMG_LoadTexture(gRenderer, "./assets/textures/test_uv1.png");
+      IMG_LoadTexture(gRenderer, "./assets/textures/earth_texture.jpg");
 
-  cube.LoadFromObj("./assets/objects/texcube.obj");
+  cube.LoadFromObj("./assets/objects/earth.obj");
   cube.SetImageTexture(tex);
-  cube.setPosition({0, 0, 4});
+  // cube.setRotation(M_PI * 2 / 3, 0, 0);
   DirectionalLight direLight(vec3(0, 0, 1), vec3(1.0, 1.0, 1.0), 1);
-  DirectionalLight direLight2(vec3(0, -1, 0), vec3(0.0, 0.6, 0.5), 1);
-  DirectionalLight direLight3(vec3(1, -1, 0), vec3(0.4, 0.0, 0.5), 1);
-  DirectionalLight direLight4(vec3(1, 1, 0), vec3(0.0, 0.3, 0.5), 1);
+  DirectionalLight direLight2(vec3(0, -1, 0), vec3(1, 1, 1), 1);
+  DirectionalLight direLight3(vec3(1, -1, 0), vec3(1, 1, 1), 1);
+  DirectionalLight direLight4(vec3(1, 1, 0), vec3(1, 1, 1), 1);
   constexpr float zNear = 0.1;
   constexpr float zFar = 80;
   constexpr float t = 80.0 * (3.1415 / 180);
@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
   float fTargetPitch = 0.0f;
   float fAspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
   Camera perCamera = PerspectiveCamera(fAspectRatio, fFov, zNear, zFar);
+  perCamera.setPosition({0, 0, -4});
   World gamewrld;
   gamewrld.AddObject(std::make_shared<Object3D>(cube));
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight));
@@ -69,6 +70,12 @@ int main(int argc, char **argv) {
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight3));
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight4));
   Renderer renderer(gRenderer, {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT});
+
+  FireEngine_RendererFlags flags = static_cast<FireEngine_RendererFlags>(
+      FireEngine_RendererFlags_EnableTextures);
+
+  renderer.flags = flags;
+
   bool quit = false;
   SDL_Event e;
   fpsTimer->resetTimer();
@@ -165,8 +172,7 @@ void init() {
     exit(1);
   }
 
-  gRenderer = SDL_CreateRenderer(
-      gWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+  gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
   if (!gRenderer) {
     fprintf(stderr, "Error Occured: %s\n", SDL_GetError());
     exit(1);

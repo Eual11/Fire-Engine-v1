@@ -103,4 +103,9 @@ so the whole application can be abstracted as a world, an object to be rendererd
 - **NOTE:** there is an elongation and buldging when the object is near the screen edges 
 - when rendering multiple objects, the objects move at the same time, this is ofc because there is literally no hierarchy  between the elements 
 - moving the camera somehow(it seems so) to move the objects as well!
+### Current State 
+- 6/3/2024 
+- Discarded the idea of depth buffering because depth testing is done in the fragment processor which in my current SDL setup i have no access to, and if i try to use SDL textures to render the scene due to the Software nature of RenderCopy, it will be horribly slow.
+- clearly the viewtransform dispostions objects without reverting them to their original position
+- the camera really needs a help lmao
 
