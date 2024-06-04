@@ -5,6 +5,7 @@
 #include "World.hpp"
 #include "premitives.hpp"
 #include <SDL2/SDL_render.h>
+#include <SDL2/SDL_stdinc.h>
 #include <algorithm>
 #include <list>
 #include <uml/vec4.h>
@@ -33,8 +34,10 @@ public:
   inline SDL_Renderer *getRenderer(void) { return m_Renderer; }
   inline SDL_Rect getViewport(void) { return m_ViewPort; }
 
-  void Render(World world, Camera camera) {
+  void Render(World world, Camera camera, float delta) {
     for (auto &object : world.ObjectList) {
+      if (object->isUpdatable)
+        object->updateObject(*object, delta);
       std::vector<triangle> projectedMesh;
       for (auto tri : object->triangles) {
 

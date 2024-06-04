@@ -3,6 +3,7 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_render.h>
 #include <fstream>
+#include <functional>
 #include <initializer_list>
 #include <sstream>
 #include <stdexcept>
@@ -107,12 +108,21 @@ struct triangle {
 struct Object3D {
   std::vector<triangle> triangles;
   SDL_Texture *imageTexture = nullptr;
+  // God forgive me for this
+  std::function<void(Object3D &, float)> updateObject = nullptr;
+  bool isUpdatable = false;
   mat4x4 transform;
   std::string objName = "untitled";
   Object3D() { transform = IdentityMat4x4(); }
   Object3D(const vec3 &pos) { transform = TranslateXYZ(pos.x, pos.y, pos.z); }
   Object3D(float fYaw, float fPitch, float fRoll) {
     transform = RotateEuler(fYaw, fPitch, fRoll);
+  }
+
+  // Horrendous design choice, this is awful but i don't have any other way
+  inline void setUpdateFunction(std::function<void(Object3D &, float)> _fun) {
+    updateObject = _fun;
+    isUpdatable = true;
   }
   void setTransform(const mat4x4 &m) { transform = m; }
   mat4x4 getTransform(void) { return transform; }
