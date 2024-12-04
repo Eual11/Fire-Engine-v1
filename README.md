@@ -78,7 +78,7 @@ Here are some examples of scenes rendered with **FireEngine**:
 # Demo
 Loading a level from Sypro the dragon(PS1) on FireEngine:
 
-![FireEngine Demo](./snapshots/demo_vids/demo.gif)
+![FireEngine Demo](./snapshots/demo_vids/demo1.gif)
 
 
 ## Contributing
