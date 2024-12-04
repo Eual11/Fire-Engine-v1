@@ -4,7 +4,7 @@ DEMO2_SRC = ./demos/demo2.cpp
 SRC = ./src/test5.cpp
 
 # SRC:= ./src/tex_test.cpp
-OBJ_NAME = e
+OBJ_NAME = FireEngine
 
 CFLAGS:= -g  -Wall -Wextra -Wpedantic -std=c++17
 LIB_PATH:= -L"${C_LIBRARY_PATH}"
