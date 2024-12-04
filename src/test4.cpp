@@ -3,9 +3,10 @@
 #include "../include/FireEngine/Renderer.hpp"
 #include "../include/FireEngine/premitives.hpp"
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_error.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_video.h>
 #include <Timer.hpp>
 #include <Utils/FPSTimer.hpp>
 #include <Utils/Texture.hpp>
@@ -20,7 +21,6 @@
 #include <vector>
 
 constexpr int WINDOW_WIDTH = 1920;
-float f = 0;
 constexpr int WINDOW_HEIGHT = 1080;
 constexpr bool RENDER_SKELETON = false;
 SDL_Window *gWindow = nullptr;
@@ -33,9 +33,6 @@ float DISABLE_BACKFACE_CULLING = false;
 using namespace FireEngine;
 int main(int argc, char **argv) {
   init();
-  Uint32 previousTime = SDL_GetTicks();
-
-  float deltaTime = 0.0f;
 
   printf("%s program running with %d args\n", argv[0], argc);
   // FPS TIMER
@@ -47,49 +44,53 @@ int main(int argc, char **argv) {
   // Object 3D (Mesh)
 
   Object3D cube;
-  SDL_Texture *tex =
-      IMG_LoadTexture(gRenderer, "./assets/textures/earth_texture.jpg");
-  cube.setScale(10, 10, 10);
-  cube.LoadFromObj("./assets/objects/earth.obj");
-  cube.setUpdateFunction([](Object3D &obj, float deltaTime) {
-    obj.setRotation(-0.2 * M_PI * deltaTime, 0, 0);
-  });
-  cube.SetImageTexture(tex);
-  DirectionalLight direLight(vec3(0, 0, 1), vec3(1.0, 1.0, 1.0), 1);
-  DirectionalLight direLight2(vec3(0, -1, 0), vec3(1, 1, 1), 1);
-  DirectionalLight direLight3(vec3(1, -1, 0), vec3(1, 1, 1), 1);
-  DirectionalLight direLight4(vec3(1, 1, 0), vec3(1, 1, 1), 1);
+  Object3D realCube;
+  Object3D ship;
+  Object3D axis;
+  axis.LoadFromObj("./assets/objects/axis.obj");
+  axis.setScale(0.2, 0.2, 0.2);
+  axis.setRotation(M_PI, 0, 0);
+  axis.setPosition({-3, 10, 8});
+  ship.setPosition({-8, 10, 5});
+  ship.LoadFromObj("./assets/objects/VideoShip.obj");
+  ship.setScale(0.2, 0.2, 0.2);
+  ship.setRotation(M_PI, 0, 0);
+  ship.setPosition({0, 10, 5});
+  realCube.LoadFromObj("./assets/objects/mountains.obj");
+
+  cube.LoadFromObj("./assets/objects/Suzanne.obj");
+  cube.setRotation(-M_PI / 2, 0, 0);
+  cube.setPosition({0, 10, 0});
+  cube.setScale(0.2, 0.2, 0.2);
+
+  DirectionalLight direLight(vec3(0, 0, 1), vec3(1.0, 0.5, 0.5), 1);
+  DirectionalLight direLight2(vec3(0, -1, 0), vec3(0.0, 0.6, 0.5), 1);
+  DirectionalLight direLight3(vec3(1, -1, 0), vec3(0.4, 0.0, 0.5), 1);
+
+  cube.setRotation(M_PI / 3, 0, 0);
+  cube.setPosition({0, 10, 2});
   constexpr float zNear = 0.1;
-  constexpr float zFar = 80;
+  constexpr float zFar = 9;
   constexpr float t = 80.0 * (3.1415 / 180);
   constexpr float fFov = t;
 
   // Camera
   float fTargetYaw = 0.0f;
-  float fTargetPitch = 0.0f;
   float fAspectRatio = static_cast<float>(WINDOW_HEIGHT) / WINDOW_WIDTH;
   Camera perCamera = PerspectiveCamera(fAspectRatio, fFov, zNear, zFar);
-  perCamera.setPosition({0, 0, -4});
   World gamewrld;
   gamewrld.AddObject(std::make_shared<Object3D>(cube));
+  gamewrld.AddObject(std::make_shared<Object3D>(ship));
+  gamewrld.AddObject(std::make_shared<Object3D>(realCube));
+  gamewrld.AddObject(std::make_shared<Object3D>(axis));
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight));
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight2));
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight3));
-  gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight4));
   Renderer renderer(gRenderer, {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT});
-
-  FireEngine_RendererFlags flags = static_cast<FireEngine_RendererFlags>(
-      FireEngine_RendererFlags_EnableTextures);
-
-  renderer.flags = flags;
-
   bool quit = false;
   SDL_Event e;
   fpsTimer->resetTimer();
   while (!quit) {
-    Uint32 currentTime = SDL_GetTicks();
-    deltaTime = (currentTime - previousTime) / 1000.0f; // Convert to seconds
-    previousTime = currentTime;
     while (SDL_PollEvent(&e)) {
       if (e.type == SDL_QUIT) {
         quit = true;
@@ -122,28 +123,13 @@ int main(int argc, char **argv) {
         }
         case SDLK_e: {
           fTargetYaw -= 0.2;
-          perCamera.setOrientation(fTargetYaw, fTargetPitch, 0);
+          perCamera.setOrientation(fTargetYaw, 0, 0);
           break;
         }
         case SDLK_r: {
 
           fTargetYaw += 0.2;
-
-          perCamera.setOrientation(fTargetYaw, fTargetPitch, 0);
-          break;
-        }
-        case SDLK_f: {
-
-          fTargetPitch -= 0.2;
-
-          perCamera.setOrientation(fTargetYaw, fTargetPitch, 0);
-          break;
-        }
-        case SDLK_v: {
-
-          fTargetPitch += 0.2;
-
-          perCamera.setOrientation(fTargetYaw, fTargetPitch, 0);
+          perCamera.setOrientation(fTargetYaw, 0, 0);
           break;
         }
         }
@@ -152,10 +138,10 @@ int main(int argc, char **argv) {
     // object transform
 
     // camera
-    renderer.Render(gamewrld, perCamera, deltaTime);
+    renderer.Render(gamewrld, perCamera, 0);
     fpsTimer->displayFPS();
     SDL_RenderPresent(gRenderer);
-    SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xff);
+    SDL_SetRenderDrawColor(gRenderer, 140, 255, 200, 0xFF);
     SDL_RenderClear(gRenderer);
   }
 

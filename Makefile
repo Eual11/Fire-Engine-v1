@@ -1,7 +1,7 @@
 DEMO0_SRC = ./demos/demo0.cpp
 DEMO1_SRC = ./demos/demo1.cpp
 DEMO2_SRC = ./demos/demo2.cpp
-SRC = ./src/test4.cpp
+SRC = ./src/test5.cpp
 
 # SRC:= ./src/tex_test.cpp
 OBJ_NAME = e
