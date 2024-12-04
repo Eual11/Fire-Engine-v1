@@ -66,13 +66,13 @@ public:
 
           for (auto &clippedTri : clippedTriangles) {
             for (size_t i = 0; i < 3; i++) {
+
               vec4 projectedVec = vec4{clippedTri.verticies[i].position, 1};
               vec4 projectedUV = vec4{clippedTri.verticies[i].uv.x,
                                       clippedTri.verticies[i].uv.y, 0, 1};
               projectedVec = projectedVec * camera.getProjectionTransform();
               projectedUV *camera.getProjectionTransform();
               // prespective divide
-              //
               //
               vertex projectedVertex;
               if (projectedVec.w != 0.0f) {

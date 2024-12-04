@@ -15,27 +15,64 @@
 #include <uml/vec4.h>
 #include <vector>
 
+// Logs a 3d vector to the stdout
 #define Logvec3(a) printf("(vec3: %f, %f, %f)\n", a.x, a.y, a.z)
+// Logs a 2d vector to the stdout
 #define Logvec2(a) printf("vec2: (%f, %f)\n", a.x, a.y)
+// Clamps a value between MIN and MAX
 #define FE_CLAMP(val, MIN, MAX)                                                \
   val = val < MIN ? MIN : val;                                                 \
   val = val > MAX ? MAX : val
+
+// Minimum between two Value
 #define FE_MIN(val1, val2) ((val1 < val2) ? (val1) : (val2))
+// Maximum between two value
 #define FE_MAX(val1, val2) ((val1 > val2) ? (val1) : (val2))
+// Converts Degree to Radian
 #define FE_DEG_TO_RAD(val) ((M_PI * val / 180.0))
+// Converts Radian to Degree Measurement
 #define FE_RAD_TO_DEG(val) (180.0 * (val / M_PI))
+
+/**
+ * @namespace FireEngine
+ * @brief Encasulating the engine components in one namesapce to avoid  name
+  conflicts
+ */
 namespace FireEngine {
-// very simple vertex class
+
+/**
+ * @struct vertex
+ * @brief Represents a simple 3D vertex that contains postion, UV and normal
+ * informations
+ *
+ * The vertex struct is used to represent a 3D vertex with 3 essential
+ * informations: postion in 3D coordinate space, UV coordinates in texture space
+ * and the vertex normal
+ */
 struct vertex {
   vec3 position;
   vec2 uv;
   vec3 normal;
 
   vertex() = default;
-
+  /**
+   * @brief constructs a vertex with postion, uv and normal informations
+   * @param pos the 3D postion.
+   * @param _uv the UV coordinate.
+   * @param norm the vertex normal.
+   */
   vertex(const vec3 &pos, vec2 &_uv, vec3 norm)
       : position{pos}, uv{_uv}, normal{norm} {}
+  /**
+   * @brief constructs a vertex with postion and uv  informations
+   * @param pos the 3D postion.
+   * @param _uv the UV coordinate.
+   */
   vertex(const vec3 &pos, vec2 &_uv) : position{pos}, uv{_uv} {}
+  /**
+   * @brief constructs a vertex with postion
+   * @param pos the 3D postion.
+   */
   vertex(const vec3 &pos) : position{pos} {}
 
   vertex(std::initializer_list<float> list) {
@@ -70,8 +107,8 @@ struct vertex {
 
 struct triangle {
   vertex verticies[3];
-  vec3 normal; // it is quite dumb to store a normal for a triangle but this is
-               // part of the learning journey xD
+  vec3 normal; // it is quite dumb to store a normal for a triangle but this
+               // is part of the learning journey xD
   vec3 color = {1, 1, 1};
   triangle() = default;
   triangle(std::initializer_list<vertex> list) {

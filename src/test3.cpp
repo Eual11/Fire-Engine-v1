@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight2));
   gamewrld.AddLight(std::make_shared<DirectionalLight>(direLight3));
   Renderer renderer(gRenderer, {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT});
+  renderer.flags = FireEngine_RendererFlags_RenderWireframe;
   bool quit = false;
   SDL_Event e;
   fpsTimer->resetTimer();
@@ -128,7 +129,7 @@ int main(int argc, char **argv) {
     // object transform
 
     // camera
-    renderer.Render(gamewrld, perCamera);
+    renderer.Render(gamewrld, perCamera, 0);
     fpsTimer->displayFPS();
     SDL_RenderPresent(gRenderer);
     SDL_SetRenderDrawColor(gRenderer, 145, 224, 255, 0xFF);
