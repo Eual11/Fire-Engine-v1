@@ -17,8 +17,8 @@
 #include <uml/vec3.h>
 #include <uml/vec4.h>
 
-constexpr int WINDOW_WIDTH = 640;
-constexpr int WINDOW_HEIGHT = 480;
+constexpr int WINDOW_WIDTH = 1920;
+constexpr int WINDOW_HEIGHT = 1080;
 
 SDL_Window *gWindow = nullptr;
 SDL_Renderer *gRenderer = nullptr;
