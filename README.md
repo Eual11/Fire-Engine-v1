@@ -76,7 +76,7 @@ Here are some examples of scenes rendered with **FireEngine**:
 *Texture mapping demo.*
 
 # Demo
-Loading a spiro level on FireEngine:
+Loading a level from Sypro the dragon(PS1) on FireEngine:
 
 ![FireEngine Demo](./snapshots/demo_vids/demo.gif)
 
